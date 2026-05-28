@@ -16,6 +16,31 @@ services:
     networks:
       - pi_default
     volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+      - comercial_app:/app/media
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: build
+    restart: always
+    command: >
+      streamlit run main.py
+      --server.address 0.0.0.0
+      --server.port 8012
+      --server.headless true
+    environment:
+      DEBUG: "False"
+      ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
+      CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
+      STREAMLIT_DASHBOARD_URL: "http://192.168.1.7:8012"
+    ports:
+      - "8012:8012"
+    networks:
+      - pi_default
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
       - comercial_app:/app/media
 volumes:
   comercial_app:
