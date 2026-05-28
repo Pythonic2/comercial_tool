@@ -10,9 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia o restante do código para o contêiner
 COPY . .
+RUN chmod +x /app/entrypoint.sh
 
 # Comando para iniciar o servidor Django
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8011"]
+CMD ["/app/entrypoint.sh"]
 #CMD exec python manage.py runserver 0.0.0.0:$PORT
 #RUN pip install gunicorn
 
