@@ -79,6 +79,7 @@ def dashboard(request):
         "eventos": eventos[:30],
         "pendentes": pendentes[:30],
         "streamlit_dashboard_url": settings.STREAMLIT_DASHBOARD_URL,
+        "embed_streamlit_dashboard": settings.STREAMLIT_DASHBOARD_URL.startswith("https://"),
     }
     template = "comercial/partials/dashboard_content.html" if request.headers.get("HX-Request") else "comercial/dashboard.html"
     return render(request, template, context)
