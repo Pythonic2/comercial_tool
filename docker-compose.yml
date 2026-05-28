@@ -10,6 +10,7 @@ services:
       ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
       CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
       SEED_DEMO_DATA: "False"
+      STREAMLIT_DASHBOARD_URL: "http://192.168.1.7:8012"
     ports:
       - "8011:8011"
     networks:
