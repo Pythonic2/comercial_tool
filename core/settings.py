@@ -1,11 +1,20 @@
+import os
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "dev-secret-key-change-me"
-DEBUG = True
-ALLOWED_HOSTS = ["*"] if DEBUG else ["127.0.0.1", "localhost"]
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    "127.0.0.1,localhost,ddccomercialtools.gestcloud.com.br",
+).split(",")
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://ddccomercialtools.gestcloud.com.br",
+).split(",")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -70,4 +79,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
-STREAMLIT_DASHBOARD_URL = "http://127.0.0.1:8501"
+STREAMLIT_DASHBOARD_URL = os.getenv("STREAMLIT_DASHBOARD_URL", "http://127.0.0.1:8501")

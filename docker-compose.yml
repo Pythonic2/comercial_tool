@@ -5,6 +5,10 @@ services:
       dockerfile: Dockerfile
     pull_policy: build
     restart: always
+    environment:
+      DEBUG: "False"
+      ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
+      CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
     ports:
       - "8011:8011"
     networks:
