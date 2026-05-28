@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Cadastro{% endblock %}
+{% block content %}
+<section class="narrow">
+    <div class="page-header compact">
+        <div>
+            <p class="eyebrow">Cadastro</p>
+            <h1>{% if instance %}Editar registro{% else %}Novo registro{% endif %}</h1>
+        </div>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+    <form method="post" enctype="multipart/form-data" class="surface stack">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button class="btn btn-brand" type="submit"><i class="bi bi-check2"></i> Salvar</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

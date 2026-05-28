@@ -1,0 +1,20 @@
+services:
+  comercial:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: build
+    restart: always
+    ports:
+      - "8011:8011"
+    networks:
+      - pi_default
+    volumes:
+      - comercial_data:/var/lib/postgresql/data
+      - comercial_app:/app/media
+volumes:
+  comercial_data:
+  comercial_app:
+networks:
+  pi_default:
+    external: true

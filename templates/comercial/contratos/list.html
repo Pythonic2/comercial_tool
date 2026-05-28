@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Contratos</p><h1>Contratos</h1></div>
+    <a class="btn btn-brand" href="{% url 'contrato_create' %}"><i class="bi bi-plus-lg"></i> Novo contrato</a>
+</section>
+<div class="table-wrap">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Título</th><th>Cliente</th><th>Status</th><th>Campos</th><th></th></tr></thead>
+        <tbody>
+        {% for contrato in contratos %}
+            <tr>
+                <td>{{ contrato.titulo }}</td><td>{{ contrato.cliente }}</td><td>{{ contrato.get_status_display }}</td><td>{{ contrato.placeholders|length }}</td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'contrato_detail' contrato.pk %}"><i class="bi bi-eye"></i></a></td>
+            </tr>
+        {% empty %}<tr><td colspan="5">Nenhum contrato cadastrado.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

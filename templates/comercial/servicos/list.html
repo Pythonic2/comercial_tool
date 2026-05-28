@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Serviços</p><h1>Serviços</h1></div>
+    <a class="btn btn-brand" href="{% url 'servico_create' %}"><i class="bi bi-plus-lg"></i> Novo serviço</a>
+</section>
+<div class="table-wrap">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Nome</th><th>Valor</th><th>Descrição</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for servico in servicos %}
+            <tr>
+                <td>{{ servico.nome }}</td><td>R$ {{ servico.valor }}</td><td>{{ servico.descricao|truncatechars:80 }}</td>
+                <td>{% if servico.ativo %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'servico_update' servico.pk %}"><i class="bi bi-pencil"></i></a></td>
+            </tr>
+        {% empty %}<tr><td colspan="5">Nenhum serviço cadastrado.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

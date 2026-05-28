@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Marcas</p><h1>Marcas</h1></div>
+    <a class="btn btn-brand" href="{% url 'marca_create' %}"><i class="bi bi-plus-lg"></i> Nova marca</a>
+</section>
+<div class="table-wrap">
+    <table class="table table-hover"><thead><tr><th>Nome</th></tr></thead><tbody>
+    {% for marca in marcas %}<tr><td>{{ marca.nome }}</td></tr>{% empty %}<tr><td>Nenhuma marca cadastrada.</td></tr>{% endfor %}
+    </tbody></table>
+</div>
+{% endblock %}
