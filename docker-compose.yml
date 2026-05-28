@@ -11,12 +11,13 @@ services:
       CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
       SEED_DEMO_DATA: "False"
       STREAMLIT_DASHBOARD_URL: "http://192.168.1.7:8012"
+      DATABASE_PATH: "/app/data/db.sqlite3"
     ports:
       - "8011:8011"
     networks:
       - pi_default
     volumes:
-      - ./db.sqlite3:/app/db.sqlite3
+      - comercial_data:/app/data
       - comercial_app:/app/media
 
   streamlit:
@@ -26,23 +27,24 @@ services:
     pull_policy: build
     restart: always
     command: >
-      streamlit run main.py
-      --server.address 0.0.0.0
-      --server.port 8012
-      --server.headless true
+      sh -c "mkdir -p /app/data &&
+      if [ ! -f /app/data/db.sqlite3 ] && [ -f /app/db.sqlite3 ]; then cp /app/db.sqlite3 /app/data/db.sqlite3; fi &&
+      streamlit run main.py --server.address 0.0.0.0 --server.port 8012 --server.headless true"
     environment:
       DEBUG: "False"
       ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
       CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
       STREAMLIT_DASHBOARD_URL: "http://192.168.1.7:8012"
+      DATABASE_PATH: "/app/data/db.sqlite3"
     ports:
       - "8012:8012"
     networks:
       - pi_default
     volumes:
-      - ./db.sqlite3:/app/db.sqlite3
+      - comercial_data:/app/data
       - comercial_app:/app/media
 volumes:
+  comercial_data:
   comercial_app:
 networks:
   pi_default:

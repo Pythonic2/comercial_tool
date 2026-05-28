@@ -1,7 +1,11 @@
 #!/bin/sh
 set -e
 
-mkdir -p /app/media
+mkdir -p /app/data /app/media
+
+if [ ! -f /app/data/db.sqlite3 ] && [ -f /app/db.sqlite3 ]; then
+    cp /app/db.sqlite3 /app/data/db.sqlite3
+fi
 
 python manage.py migrate --noinput
 
