@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Produtos</p><h1>Produtos</h1></div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-dark" href="{% url 'marca_list' %}"><i class="bi bi-tags"></i> Marcas</a>
+        <a class="btn btn-brand" href="{% url 'produto_create' %}"><i class="bi bi-plus-lg"></i> Novo produto</a>
+    </div>
+</section>
+<div class="table-wrap">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Nome</th><th>Marca</th><th>Valor</th><th>Estoque</th><th>Medida</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for produto in produtos %}
+            <tr>
+                <td>{{ produto.nome }}</td><td>{{ produto.marca }}</td><td>R$ {{ produto.valor }}</td><td>{{ produto.estoque_quantidade }}</td>
+                <td>{{ produto.medida }} {% if produto.litros %}{{ produto.litros }}L{% endif %}</td>
+                <td>{% if produto.disponivel %}<span class="badge text-bg-success">Disponível</span>{% else %}<span class="badge text-bg-secondary">Indisponível</span>{% endif %}</td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'produto_update' produto.pk %}"><i class="bi bi-pencil"></i></a></td>
+            </tr>
+        {% empty %}<tr><td colspan="7">Nenhum produto cadastrado.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

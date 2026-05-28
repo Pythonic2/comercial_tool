@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Clientes</p><h1>Clientes cadastrados</h1></div>
+    <a class="btn btn-brand" href="{% url 'cliente_create' %}"><i class="bi bi-plus-lg"></i> Novo cliente</a>
+</section>
+<div class="table-wrap">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Nome</th><th>CPF</th><th>Email</th><th>Celular</th><th></th></tr></thead>
+        <tbody>
+        {% for cliente in clientes %}
+            <tr>
+                <td>{{ cliente.nome_completo }}</td><td>{{ cliente.cpf }}</td><td>{{ cliente.email }}</td><td>{{ cliente.celular }}</td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'cliente_update' cliente.pk %}"><i class="bi bi-pencil"></i></a></td>
+            </tr>
+        {% empty %}<tr><td colspan="5">Nenhum cliente cadastrado.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

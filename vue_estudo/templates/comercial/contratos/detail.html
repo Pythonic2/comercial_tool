@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Contrato</p><h1>{{ contrato.titulo }}</h1></div>
+    <a class="btn btn-brand" href="{% url 'contrato_campos' contrato.pk %}"><i class="bi bi-input-cursor-text"></i> Editar campos</a>
+</section>
+<section class="surface stack">
+    <p><strong>Cliente:</strong> {{ contrato.cliente }}</p>
+    <p><strong>Status:</strong> {{ contrato.get_status_display }}</p>
+    <p><strong>Campos encontrados:</strong>
+        {% for campo in contrato.placeholders %}<span class="badge text-bg-light border">{{ campo }}</span>{% empty %}nenhum{% endfor %}
+    </p>
+    <p>
+        <a class="btn btn-outline-dark" href="{{ contrato.documento_modelo.url }}"><i class="bi bi-download"></i> Modelo original</a>
+        {% if contrato.documento_final %}
+            <a class="btn btn-brand" href="{{ contrato.documento_final.url }}"><i class="bi bi-download"></i> Documento final</a>
+        {% endif %}
+    </p>
+</section>
+{% endblock %}

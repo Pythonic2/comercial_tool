@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Eventos</p><h1>Eventos</h1></div>
+    <a class="btn btn-brand" href="{% url 'evento_create' %}"><i class="bi bi-plus-lg"></i> Novo evento</a>
+</section>
+<div class="table-wrap">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>Endereço</th><th>Status</th><th>Valor</th><th></th></tr></thead>
+        <tbody>
+        {% for evento in eventos %}
+            <tr>
+                <td>{{ evento.data|date:"d/m/Y" }} {{ evento.hora|time:"H:i" }}</td><td>{{ evento.cliente }}</td><td>{{ evento.tipo_evento }}</td>
+                <td>{{ evento.endereco_evento|truncatechars:50 }}</td><td>{{ evento.get_status_display }}</td><td>R$ {{ evento.valor_total }}</td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'evento_update' evento.pk %}"><i class="bi bi-pencil"></i></a></td>
+            </tr>
+        {% empty %}<tr><td colspan="7">Nenhum evento cadastrado.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

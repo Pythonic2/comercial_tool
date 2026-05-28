@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Dashboard</p><h1>Vendas, contratos e eventos</h1></div>
+</section>
+<form class="filters" hx-get="{% url 'dashboard' %}" hx-target="#dashboard-content" hx-push-url="true">
+    <select class="form-select" name="periodo">
+        <option value="mes" {% if periodo == "mes" %}selected{% endif %}>Mês atual</option>
+        <option value="semestre" {% if periodo == "semestre" %}selected{% endif %}>Semestre atual</option>
+        <option value="ano" {% if periodo == "ano" %}selected{% endif %}>Ano atual</option>
+        <option value="todos" {% if periodo == "todos" %}selected{% endif %}>Todos</option>
+    </select>
+    <select class="form-select" name="status">
+        <option value="">Todos os eventos</option>
+        <option value="completo" {% if status == "completo" %}selected{% endif %}>Completos</option>
+        <option value="pendente" {% if status == "pendente" %}selected{% endif %}>Não completos</option>
+        <option value="cancelado" {% if status == "cancelado" %}selected{% endif %}>Cancelados</option>
+    </select>
+    <button class="btn btn-brand" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+</form>
+<div id="dashboard-content">
+    {% include "comercial/partials/dashboard_content.html" %}
+</div>
+<section class="streamlit-panel">
+    <div class="streamlit-panel__header">
+        <div>
+            <p class="eyebrow">Gráficos interativos</p>
+            <h2 class="section-title">Dashboard Streamlit</h2>
+        </div>
+        <a class="btn btn-outline-dark btn-sm" href="{{ streamlit_dashboard_url }}" target="_blank" rel="noopener">
+            <i class="bi bi-box-arrow-up-right"></i> Abrir em nova aba
+        </a>
+    </div>
+    <iframe
+        class="streamlit-frame"
+        src="{{ streamlit_dashboard_url }}"
+        title="Dashboard Streamlit"
+        loading="lazy"
+    ></iframe>
+</section>
+{% endblock %}

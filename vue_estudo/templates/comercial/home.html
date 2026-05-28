@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Painel inicial</p>
+        <h1>Escolha o que deseja gerenciar</h1>
+    </div>
+    <a class="btn btn-outline-dark" href="{% url 'configuracao_empresa' %}">
+        <i class="bi bi-gear"></i> Configuração
+    </a>
+</section>
+
+<section class="module-grid">
+    {% for title, text, url_name, icon in cards %}
+    <a class="module-card" href="{% url url_name %}">
+        <i class="bi {{ icon }}"></i>
+        <span class="module-title">{{ title }}</span>
+        <span>{{ text }}</span>
+    </a>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div><p class="eyebrow">Evento</p><h1>{% if evento %}Editar evento{% else %}Novo evento{% endif %}</h1></div>
+    <a href="{% url 'evento_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</section>
+<form method="post" class="surface stack">
+    {% csrf_token %}
+    <div class="form-grid">{{ form.as_p }}</div>
+    <h2 class="section-title">Produtos do evento</h2>
+    {{ produto_formset.management_form }}
+    <div class="line-items">{% for item_form in produto_formset %}<div class="line-item">{{ item_form.as_p }}</div>{% endfor %}</div>
+    <h2 class="section-title">Serviços do evento</h2>
+    {{ servico_formset.management_form }}
+    <div class="line-items">{% for item_form in servico_formset %}<div class="line-item">{{ item_form.as_p }}</div>{% endfor %}</div>
+    <button class="btn btn-brand" type="submit"><i class="bi bi-check2"></i> Salvar evento</button>
+</form>
+{% endblock %}

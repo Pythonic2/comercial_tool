@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Entrar{% endblock %}
+{% block content %}
+<section class="login-wrap">
+    <div class="login-panel">
+        <img src="{% static 'img/logo2.png' %}" alt="Logo" class="login-logo">
+        <h1>Entrar na plataforma</h1>
+        <form method="post" class="stack">
+            {% csrf_token %}
+            {% if form.errors %}
+                <div class="alert alert-danger">Usuário ou senha inválidos.</div>
+            {% endif %}
+            <div>
+                <label class="form-label" for="{{ form.username.id_for_label }}">Usuário</label>
+                <input class="form-control" type="text" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}" autofocus required>
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.password.id_for_label }}">Senha</label>
+                <input class="form-control" type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" required>
+            </div>
+            <button class="btn btn-brand w-100" type="submit">Entrar</button>
+        </form>
+    </div>
+</section>
+{% endblock %}
