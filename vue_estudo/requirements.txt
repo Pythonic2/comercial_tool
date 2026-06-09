@@ -7,3 +7,4 @@ streamlit>=1.35
 pandas>=2.0
 whitenoise>=6.6
 psycopg[binary]>=3.1
+#
