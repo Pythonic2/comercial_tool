@@ -5,8 +5,12 @@ services:
       dockerfile: Dockerfile
     pull_policy: build
     restart: always
-    env_file:
-      - .env
+    environment:
+      DEBUG: "False"
+      ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
+      CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
+      SEED_DEMO_DATA: "False"
+      STREAMLIT_DASHBOARD_URL: "https://streamlit-ddccomercialtools.gestcloud.com.br"
     ports:
       - "8011:8011"
     networks:
@@ -25,8 +29,11 @@ services:
       sh -c "mkdir -p /app/data &&
       if [ ! -f /app/data/db.sqlite3 ] && [ -f /app/db.sqlite3 ]; then cp /app/db.sqlite3 /app/data/db.sqlite3; fi &&
       streamlit run main.py --server.address 0.0.0.0 --server.port 8012 --server.headless true"
-    env_file:
-      - .env
+    environment:
+      DEBUG: "False"
+      ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
+      CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
+      STREAMLIT_DASHBOARD_URL: "https://streamlit-ddccomercialtools.gestcloud.com.br"
     ports:
       - "8012:8012"
     networks:

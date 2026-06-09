@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from urllib.parse import unquote, urlparse
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -58,50 +57,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
-def _database_config_from_url(database_url):
-    parsed = urlparse(database_url)
-
-    if parsed.scheme in {"postgres", "postgresql"}:
-        return {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": unquote(parsed.path.lstrip("/")),
-            "USER": unquote(parsed.username or ""),
-            "PASSWORD": unquote(parsed.password or ""),
-            "HOST": parsed.hostname or "",
-            "PORT": parsed.port or 5432,
-        }
-
-    if parsed.scheme in {"mysql", "mysql2"}:
-        return {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": unquote(parsed.path.lstrip("/")),
-            "USER": unquote(parsed.username or ""),
-            "PASSWORD": unquote(parsed.password or ""),
-            "HOST": parsed.hostname or "",
-            "PORT": parsed.port or 3306,
-        }
-
-    if parsed.scheme == "sqlite":
-        return {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": unquote(parsed.path),
-        }
-
-    raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed.scheme}")
-
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    DATABASES = {
-        "default": _database_config_from_url(DATABASE_URL),
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "banco2_db",
+        "USER": "banco2_user",
+        "PASSWORD": "37192541aaSS@!",
+        "HOST": "postgres_banco2",
+        "PORT": "5433",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.getenv("DATABASE_PATH", BASE_DIR / "db.sqlite3"),
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = []
 
