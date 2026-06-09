@@ -78,14 +78,8 @@ class Command(BaseCommand):
 
     def _create_produtos(self, marcas):
         dados = [
-            ("Barril Chopp Pilsen 30L", "Dona do Chopp", "lt", 30, "30 litros", "360.00", 14),
-            ("Barril Chopp Pilsen 50L", "Dona do Chopp", "lt", 50, "50 litros", "540.00", 9),
-            ("Barril Chopp IPA 30L", "Colorado", "lt", 30, "30 litros", "480.00", 6),
-            ("Barril Chopp Lager 50L", "Heineken", "lt", 50, "50 litros", "690.00", 5),
-            ("Barril Stella 30L", "Stella Artois", "lt", 30, "30 litros", "510.00", 7),
-            ("Chopeira eletrica 1 torneira", "Dona do Chopp", "un", None, "110V/220V", "180.00", 12),
-            ("Chopeira bomba manual", "Dona do Chopp", "un", None, "Bomba picnic", "120.00", 10),
-            ("Copo descartavel 300ml pct 100", "Dona do Chopp", "un", None, "100 unidades", "38.00", 32),
+            ("300 litros Brahma ou Heineken", "Dona do Chopp", "lt", 300, "300 litros", "5194.00", 10),
+            ("2 Balcões", "Dona do Chopp", "un", None, "Brinde para evento", "0.00", 5),
         ]
         produtos = {}
         for nome, marca, unidade, litros, medida, valor, estoque in dados:
@@ -107,11 +101,9 @@ class Command(BaseCommand):
 
     def _create_servicos(self):
         dados = [
-            ("Entrega e retirada", "90.00", "Logistica para entrega, montagem e retirada."),
-            ("Instalacao da chopeira", "130.00", "Instalacao, teste de pressao e orientacao de uso."),
-            ("Operador de chopp", "280.00", "Profissional para servir e acompanhar o evento."),
-            ("Kit gelo e conservacao", "75.00", "Gelo, caixa termica e apoio de conservacao."),
-            ("Limpeza pos-evento", "120.00", "Limpeza basica dos equipamentos locados."),
+            ("2 Profissionais durante 4h", "260.00", "Instalação e atendimento durante 4 horas com 2 profissionais."),
+            ("Frete e instalação", "150.00", "Frete, montagem e suporte inicial."),
+            ("Copos descartáveis", "50.00", "Copos descartáveis para apoio ao evento."),
         ]
         servicos = {}
         for nome, valor, descricao in dados:

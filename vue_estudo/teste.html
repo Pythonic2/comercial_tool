@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Personalizador de Chopeira</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4efe7;
+      color: #1f1f1f;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 30px;
+      padding: 30px;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+      height: fit-content;
+    }
+
+    .panel h1 {
+      font-size: 28px;
+      margin: 0 0 12px;
+      line-height: 1.1;
+    }
+
+    .panel p {
+      color: #555;
+      line-height: 1.5;
+      margin-bottom: 22px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 14px;
+      background: #fafafa;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .model-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .model-option {
+      border: 2px solid #e7e7e7;
+      border-radius: 14px;
+      background: #fff;
+      padding: 6px;
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .model-option.active {
+      border-color: #111;
+    }
+
+    .model-thumb {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      object-position: center top;
+      border-radius: 9px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+    }
+
+    .model-name {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .buttons {
+      display: grid;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.model-option {
+      border: 2px solid #e7e7e7;
+      border-radius: 14px;
+      background: #fff;
+      padding: 6px;
+    }
+
+    .secondary {
+      background: #111;
+      color: white;
+    }
+
+    .danger {
+      background: #eee;
+      color: #111;
+    }
+
+    .preview-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 60px);
+    }
+
+    .mockup-wrapper {
+      position: relative;
+      max-width: 620px;
+      width: 100%;
+      border-radius: 26px;
+      overflow: hidden;
+      background: white;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.18);
+      user-select: none;
+    }
+
+    .mockup-wrapper img.base {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .logo-slot {
+      position: absolute;
+      border-radius: 50%;
+      overflow: hidden;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+    }
+
+    .logo-slot:active {
+      cursor: grabbing;
+    }
+
+    .logo-slot.show-guide {
+      outline: 2px dashed rgba(255, 0, 0, 0.8);
+      outline-offset: -2px;
+    }
+
+    .logo-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px;
+      font-weight: 900;
+      font-size: 16px;
+      color: #111;
+      line-height: 1.05;
+      pointer-events: none;
+    }
+
+    .logo-img {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 72%;
+      height: 72%;
+      object-fit: contain;
+      transform-origin: center center;
+      display: none;
+      pointer-events: none;
+    }
+
+    .tip {
+      font-size: 13px;
+      color: #666;
+      background: #f7f7f7;
+      padding: 12px;
+      border-radius: 14px;
+      line-height: 1.45;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        grid-template-columns: 1fr;
+        padding: 18px;
+      }
+
+      .preview-area {
+        min-height: auto;
+      }
+
+      .panel {
+        order: 2;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <aside class="panel">
+    <h1>Personalizar chopeira</h1>
+
+    <p>
+      Envie a logomarca do cliente e veja a prévia aplicada no círculo superior da chopeira.
+    </p>
+
+    <div class="field">
+      <label>Modelo da chopeira</label>
+      <div class="model-options" id="modelOptions"></div>
+    </div>
+
+    <div class="field">
+      <label for="logoInput">Enviar logo</label>
+      <input id="logoInput" type="file" accept="image/*">
+    </div>
+
+    <div class="field">
+      <label for="scaleRange">Tamanho da logo</label>
+      <input id="scaleRange" type="range" min="0.4" max="2.4" step="0.01" value="1">
+    </div>
+
+    <div class="field">
+      <label for="rotateRange">Rotação</label>
+      <input id="rotateRange" type="range" min="-30" max="30" step="1" value="0">
+    </div>
+
+    <div class="field">
+      <label for="opacityRange">Opacidade</label>
+      <input id="opacityRange" type="range" min="0.2" max="1" step="0.01" value="1">
+    </div>
+
+    <div class="field">
+      <label>
+        <input id="guideToggle" type="checkbox" checked>
+        Mostrar guia do encaixe
+      </label>
+    </div>
+
+    <div class="buttons">
+      <button class="secondary" id="centerBtn">Centralizar logo</button>
+      <button class="danger" id="resetBtn">Resetar ajustes</button>
+    </div>
+
+    <div class="tip">
+      Dica: para ficar mais bonito, use uma logo em PNG com fundo transparente.
+      Você também pode arrastar a logo diretamente no círculo da chopeira.
+    </div>
+  </aside>
+
+  <main class="preview-area">
+    <div class="mockup-wrapper" id="mockupWrapper">
+      <img class="base" id="baseImage" src="galeria-chopeira-1.jpeg" alt="Chopeira personalizada">
+
+      <div class="logo-slot show-guide" id="logoSlot">
+        <div class="logo-placeholder" id="placeholder">
+          sua<br>logomarca<br>aqui
+        </div>
+
+        <img id="logoImg" class="logo-img" alt="Logo do cliente">
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  const baseImage = document.getElementById("baseImage");
+  const logoSlot = document.getElementById("logoSlot");
+  const logoImg = document.getElementById("logoImg");
+  const placeholder = document.getElementById("placeholder");
+
+  const logoInput = document.getElementById("logoInput");
+  const modelOptions = document.getElementById("modelOptions");
+  const scaleRange = document.getElementById("scaleRange");
+  const rotateRange = document.getElementById("rotateRange");
+  const opacityRange = document.getElementById("opacityRange");
+  const guideToggle = document.getElementById("guideToggle");
+
+  const centerBtn = document.getElementById("centerBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  /*
+    Para ajustar o encaixe da logo em cada foto:
+    x = centro horizontal do circulo
+    y = centro vertical do circulo
+    r = raio do circulo
+  */
+  const CHOPEIRAS = [
+    {
+      name: "Chopeira 1",
+      src: "galeria-chopeira-1.jpeg",
+      slot: { x: 460, y: 135, r: 100 }
+    },
+    {
+      name: "Chopeira 2",
+      src: "galeria-chopeira-2.jpeg",
+       slot: { x: 460, y: 135, r: 100 }
+    },
+    {
+        name: "Chopeira 3",
+        src: "galeria-chopeira-3.jpeg",
+        slot: { x: 465, y: 143, r: 100 }
+    },
+    {
+      name: "Chopeira 4",
+      src: "galeria-chopeira-4.jpeg",
+       slot: { x: 460, y: 135, r: 100 }
+    },
+    {
+      name: "Chopeira 5",
+      src: "galeria-chopeira-5.jpeg",
+      slot: { x: 460, y: 135, r: 100 }
+    }
+  ];
+
+  const state = {
+    scale: 1,
+    rotation: 0,
+    opacity: 1,
+    offsetX: 0,
+    offsetY: 0,
+    hasLogo: false,
+    chopeiraIndex: 0
+  };
+
+  function updateSlotPosition() {
+    const displayedWidth = baseImage.clientWidth;
+    const displayedHeight = baseImage.clientHeight;
+
+    const naturalWidth = baseImage.naturalWidth;
+    const naturalHeight = baseImage.naturalHeight;
+
+    if (!naturalWidth || !naturalHeight) return;
+
+    const scaleX = displayedWidth / naturalWidth;
+    const scaleY = displayedHeight / naturalHeight;
+
+    const currentSlot = CHOPEIRAS[state.chopeiraIndex].slot;
+    const slotSize = currentSlot.r * 2 * scaleX;
+
+    logoSlot.style.width = `${slotSize}px`;
+    logoSlot.style.height = `${slotSize}px`;
+
+    logoSlot.style.left = `${currentSlot.x * scaleX}px`;
+    logoSlot.style.top = `${currentSlot.y * scaleY}px`;
+
+    logoSlot.style.transform = "translate(-50%, -50%)";
+
+    updateLogoTransform();
+  }
+
+  function renderModelOptions() {
+    modelOptions.innerHTML = "";
+
+    CHOPEIRAS.forEach(function(chopeira, index) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "model-option";
+      button.title = chopeira.name;
+      button.setAttribute("aria-label", chopeira.name);
+
+      if (index === state.chopeiraIndex) {
+        button.classList.add("active");
+      }
+
+      button.innerHTML = `
+        <img class="model-thumb" src="${chopeira.src}" alt="">
+        <span class="model-name">${chopeira.name}</span>
+      `;
+
+      button.addEventListener("click", function() {
+        selectChopeira(index);
+      });
+
+      modelOptions.appendChild(button);
+    });
+  }
+
+  function selectChopeira(index) {
+    const chopeira = CHOPEIRAS[index];
+
+    state.chopeiraIndex = index;
+    baseImage.src = chopeira.src;
+
+    renderModelOptions();
+    updateSlotPosition();
+  }
+
+  function updateLogoTransform() {
+    logoImg.style.transform = `
+      translate(-50%, -50%)
+      translate(${state.offsetX}px, ${state.offsetY}px)
+      scale(${state.scale})
+      rotate(${state.rotation}deg)
+    `;
+
+    logoImg.style.opacity = state.opacity;
+  }
+
+  function resetLogoPosition(removeLogo = true) {
+    state.scale = 1;
+    state.rotation = 0;
+    state.opacity = 1;
+    state.offsetX = 0;
+    state.offsetY = 0;
+
+    scaleRange.value = 1;
+    rotateRange.value = 0;
+    opacityRange.value = 1;
+
+    if (removeLogo) {
+      logoInput.value = "";
+      logoImg.src = "";
+      logoImg.style.display = "none";
+      placeholder.style.display = "flex";
+      state.hasLogo = false;
+    }
+
+    updateLogoTransform();
+  }
+
+  logoInput.addEventListener("change", function(event) {
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      logoImg.src = e.target.result;
+      logoImg.style.display = "block";
+      placeholder.style.display = "none";
+      state.hasLogo = true;
+      resetLogoPosition(false);
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+  scaleRange.addEventListener("input", function() {
+    state.scale = Number(this.value);
+    updateLogoTransform();
+  });
+
+  rotateRange.addEventListener("input", function() {
+    state.rotation = Number(this.value);
+    updateLogoTransform();
+  });
+
+  opacityRange.addEventListener("input", function() {
+    state.opacity = Number(this.value);
+    updateLogoTransform();
+  });
+
+  guideToggle.addEventListener("change", function() {
+    logoSlot.classList.toggle("show-guide", this.checked);
+  });
+
+  centerBtn.addEventListener("click", function() {
+    state.offsetX = 0;
+    state.offsetY = 0;
+    updateLogoTransform();
+  });
+
+  resetBtn.addEventListener("click", function() {
+    resetLogoPosition(true);
+  });
+
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let initialOffsetX = 0;
+  let initialOffsetY = 0;
+
+  logoSlot.addEventListener("pointerdown", function(event) {
+    if (!state.hasLogo) return;
+
+    dragging = true;
+
+    startX = event.clientX;
+    startY = event.clientY;
+
+    initialOffsetX = state.offsetX;
+    initialOffsetY = state.offsetY;
+
+    logoSlot.setPointerCapture(event.pointerId);
+  });
+
+  logoSlot.addEventListener("pointermove", function(event) {
+    if (!dragging) return;
+
+    state.offsetX = initialOffsetX + (event.clientX - startX);
+    state.offsetY = initialOffsetY + (event.clientY - startY);
+
+    updateLogoTransform();
+  });
+
+  logoSlot.addEventListener("pointerup", function(event) {
+    dragging = false;
+    logoSlot.releasePointerCapture(event.pointerId);
+  });
+
+  logoSlot.addEventListener("pointercancel", function() {
+    dragging = false;
+  });
+
+  baseImage.addEventListener("load", updateSlotPosition);
+  window.addEventListener("resize", updateSlotPosition);
+
+  renderModelOptions();
+  selectChopeira(0);
+
+  if (baseImage.complete) {
+    updateSlotPosition();
+  }
+</script>
+
+</body>
+</html>

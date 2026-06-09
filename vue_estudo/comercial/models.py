@@ -1,8 +1,10 @@
 from decimal import Decimal
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 
 class TimeStampedModel(models.Model):
@@ -13,47 +15,181 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class CompanyProfile(TimeStampedModel):
+    """Perfil de empresa multi-tenant. Cada empresa registrada no sistema tem um proprietário (usuário)."""
+    
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name="company_profile"
+    )
+    nome_empresa = models.CharField(max_length=120, blank=True)
+    cnpj = models.CharField(max_length=20, blank=True)
+    telefone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    endereco = models.CharField(max_length=255, blank=True)
+    logo = models.ImageField(upload_to="logos/", blank=True, null=True)
+    
+    class Meta:
+        ordering = ["nome_empresa"]
+    
+    def __str__(self):
+        return self.nome_empresa
+
+
+class Subscription(TimeStampedModel):
+    """Modelo para gerenciar assinaturas e pagamentos de cada empresa."""
+    
+    company = models.OneToOneField(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="subscription"
+    )
+    pago = models.BooleanField(default=True)
+    data_pagamento = models.DateTimeField(default=timezone.now)
+    proximo_pagamento = models.DateTimeField(blank=True, null=True)
+    meio_pagamento = models.CharField(max_length=40, blank=True)
+    valor_mensalidade = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=Decimal("0.00")
+    )
+    # Campos para futuro: meio de pagamento, cartão, etc.
+    
+    class Meta:
+        ordering = ["-data_pagamento"]
+    
+    def save(self, *args, **kwargs):
+        # Auto-preencher próximo pagamento se não estiver definido
+        if not self.proximo_pagamento:
+            self.proximo_pagamento = self.data_pagamento + timedelta(days=30)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        status = "Pago" if self.pago else "Pendente"
+        return f"{self.company} - {status}"
+
+
+class CompanyEmployee(TimeStampedModel):
+    """
+    Funcionários/Colaboradores de uma empresa.
+    Permite que múltiplos usuários acessem e gerenciem a empresa.
+    """
+    ROLES = [
+        ('owner', 'Proprietário'),
+        ('manager', 'Gerente'),
+        ('employee', 'Funcionário'),
+    ]
+    
+    company = models.ForeignKey(
+        CompanyProfile,
+        on_delete=models.CASCADE,
+        related_name='employees'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='company_employees'
+    )
+    role = models.CharField(max_length=20, choices=ROLES, default='employee')
+    ativo = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ['company', 'user']
+        ordering = ['-criado_em']
+    
+    def is_owner(self):
+        return self.role == 'owner'
+    
+    def is_manager(self):
+        return self.role in ['owner', 'manager']
+    
+    def can_create_orcamento(self):
+        return self.ativo
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.company.nome_empresa} ({self.get_role_display()})"
+
+
 class Cliente(TimeStampedModel):
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="clientes",
+        null=True,
+        blank=True
+    )
     nome_completo = models.CharField(max_length=120)
-    cpf = models.CharField(max_length=14, unique=True)
-    email = models.EmailField(max_length=120)
-    endereco_residencial = models.CharField(max_length=255)
-    celular = models.CharField(max_length=20)
+    cpf = models.CharField(max_length=14, blank=True)
+    email = models.EmailField(max_length=120, blank=True)
+    endereco_residencial = models.CharField(max_length=255, blank=True)
+    celular = models.CharField(max_length=20, blank=True)
 
     class Meta:
         ordering = ["nome_completo"]
-
+        unique_together = ["company", "cpf"]  # CPF único por empresa
+    
     def __str__(self):
         return self.nome_completo
 
 
 class Marca(TimeStampedModel):
-    nome = models.CharField(max_length=80, unique=True)
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="marcas",
+        null=True,
+        blank=True
+    )
+    nome = models.CharField(max_length=80)
 
     class Meta:
         ordering = ["nome"]
+        unique_together = ["company", "nome"]  # Nome único por empresa
 
     def __str__(self):
         return self.nome
 
 
 class Produto(TimeStampedModel):
+    TIPOS = [
+        ("produto", "Produto"),
+        ("servico", "Serviço"),
+    ]
     UNIDADES = [
         ("un", "Unidade"),
         ("lt", "Litros"),
         ("m", "Metro"),
         ("m2", "Metro quadrado"),
         ("kg", "Quilo"),
+        ("h", "Hora"),
+        ("diaria", "Diária"),
     ]
 
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="produtos",
+        null=True,
+        blank=True
+    )
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="produto")
     nome = models.CharField(max_length=120)
-    marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="produtos")
+    marca = models.ForeignKey(
+        Marca, 
+        on_delete=models.PROTECT, 
+        related_name="produtos",
+        null=True,
+        blank=True
+    )
     disponivel = models.BooleanField(default=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
-    estoque_quantidade = models.PositiveIntegerField(default=0)
+    estoque_quantidade = models.PositiveIntegerField(default=0, blank=True)
     unidade_medida = models.CharField(max_length=10, choices=UNIDADES, default="un")
     medida = models.CharField(max_length=80, blank=True)
     litros = models.PositiveIntegerField(blank=True, null=True)
+    quantidade_profissionais = models.PositiveIntegerField(blank=True, null=True)
+    duracao_horas = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
     descricao = models.TextField(blank=True)
 
     class Meta:
@@ -61,13 +197,51 @@ class Produto(TimeStampedModel):
 
     def __str__(self):
         detalhe = f" - {self.litros}L" if self.litros else ""
+        if self.tipo == "servico" and self.quantidade_profissionais and self.duracao_horas:
+            detalhe = f" - {self.quantidade_profissionais} prof. por {self.duracao_horas}h"
         return f"{self.nome}{detalhe} - R$ {self.valor}"
+    
+    @property
+    def imagens(self):
+        """Retorna todas as imagens do produto, ordenadas."""
+        return self.product_images.all().order_by("ordem")
+    
+    @property
+    def imagem_principal(self):
+        """Retorna a primeira imagem do produto."""
+        return self.product_images.first()
+
+
+class ProductImage(TimeStampedModel):
+    """Modelo para armazenar múltiplas imagens de produtos."""
+    
+    produto = models.ForeignKey(
+        Produto, 
+        on_delete=models.CASCADE, 
+        related_name="product_images"
+    )
+    imagem = models.ImageField(upload_to="produtos/")
+    ordem = models.PositiveIntegerField(default=0)
+    descricao = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["ordem", "criado_em"]
+
+    def __str__(self):
+        return f"{self.produto} - Imagem {self.ordem}"
 
 
 class Servico(TimeStampedModel):
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="servicos",
+        null=True,
+        blank=True
+    )
     nome = models.CharField(max_length=120)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
-    descricao = models.TextField()
+    descricao = models.TextField(blank=True)
     ativo = models.BooleanField(default=True)
 
     class Meta:
@@ -77,7 +251,12 @@ class Servico(TimeStampedModel):
         return f"{self.nome} - R$ {self.valor}"
 
 
+
 class ConfiguracaoEmpresa(models.Model):
+    """
+    Modelo legado mantido por compatibilidade. 
+    Use CompanyProfile para novas implementações.
+    """
     nome_empresa = models.CharField(max_length=120, default="Dona do Chopp")
     cnpj = models.CharField(max_length=20, blank=True)
     telefone = models.CharField(max_length=20, blank=True)
@@ -110,8 +289,22 @@ class Orcamento(TimeStampedModel):
         ("boleto", "Boleto"),
     ]
 
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="orcamentos",
+        null=True,
+        blank=True
+    )
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="orcamentos")
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    criado_por = models.ForeignKey(
+        CompanyEmployee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orcamentos_criados"
+    )
     status = models.CharField(max_length=20, choices=STATUS, default="rascunho")
     validade = models.DateField(blank=True, null=True)
     forma_pagamento = models.CharField(max_length=20, choices=FORMAS_PAGAMENTO, default="pix")
@@ -119,6 +312,8 @@ class Orcamento(TimeStampedModel):
     desconto = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     logo = models.ImageField(upload_to="logos/", blank=True, null=True)
     arquivo_pdf = models.FileField(upload_to="orcamentos/", blank=True, null=True)
+    link_pubico = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    enviado_em = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ["-criado_em"]
@@ -179,6 +374,13 @@ class Contrato(TimeStampedModel):
         ("cancelado", "Cancelado"),
     ]
 
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="contratos",
+        null=True,
+        blank=True
+    )
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="contratos")
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     orcamento = models.ForeignKey(Orcamento, on_delete=models.SET_NULL, blank=True, null=True)
@@ -210,6 +412,13 @@ class Evento(TimeStampedModel):
         ("choppeira_bomba", "Choppeira Bomba"),
     ]
 
+    company = models.ForeignKey(
+        CompanyProfile, 
+        on_delete=models.CASCADE, 
+        related_name="eventos",
+        null=True,
+        blank=True
+    )
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="eventos")
     contrato = models.ForeignKey(Contrato, on_delete=models.SET_NULL, blank=True, null=True, related_name="eventos")
     endereco_evento = models.CharField(max_length=255)
@@ -228,6 +437,7 @@ class Evento(TimeStampedModel):
 
     def __str__(self):
         return f"{self.tipo_evento} - {self.data} {self.hora}"
+
 
 
 class EventoProduto(models.Model):

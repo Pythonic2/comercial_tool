@@ -31,11 +31,18 @@
             <i class="bi bi-box-arrow-up-right"></i> Abrir em nova aba
         </a>
     </div>
-    <iframe
-        class="streamlit-frame"
-        src="{{ streamlit_dashboard_url }}"
-        title="Dashboard Streamlit"
-        loading="lazy"
-    ></iframe>
+    {% if embed_streamlit_dashboard %}
+        <iframe
+            class="streamlit-frame"
+            src="{{ streamlit_dashboard_url }}"
+            title="Dashboard Streamlit"
+            loading="lazy"
+        ></iframe>
+    {% else %}
+        <div class="streamlit-placeholder">
+            <i class="bi bi-shield-lock"></i>
+            <p>Abra os gráficos em uma nova aba enquanto o Streamlit não estiver publicado em HTTPS.</p>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}

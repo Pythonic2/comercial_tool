@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Criar conta{% endblock %}
+{% block content %}
+<section class="login-wrap">
+    <div class="login-panel login-panel-wide">
+        <img src="{% static 'img/logo2.png' %}" alt="Logo" class="login-logo">
+        <h1>Criar conta</h1>
+        <form method="post" enctype="multipart/form-data" class="stack">
+            {% csrf_token %}
+            <h2 class="section-title">Seu acesso</h2>
+            {{ user_form.as_p }}
+            <h2 class="section-title">Empresa</h2>
+            {{ company_form.as_p }}
+            <button class="btn btn-brand w-100" type="submit">Cadastrar e entrar</button>
+            <a class="btn btn-outline-dark w-100" href="{% url 'login' %}">Já tenho conta</a>
+        </form>
+    </div>
+</section>
+{% endblock %}

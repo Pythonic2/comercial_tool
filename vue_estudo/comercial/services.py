@@ -112,10 +112,8 @@ def _render_pdf(original, output_path, values):
 def gerar_pdf_orcamento(orcamento):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
     from reportlab.pdfgen import canvas
-    from reportlab.platypus import Frame, Paragraph
 
     output_dir = Path(settings.MEDIA_ROOT) / "orcamentos"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -123,55 +121,167 @@ def gerar_pdf_orcamento(orcamento):
 
     c = canvas.Canvas(str(output_path), pagesize=A4)
     width, height = A4
-    amarelo = colors.HexColor("#FFC52F")
-    vermelho = colors.HexColor("#D8332F")
-    preto = colors.HexColor("#191919")
+    preto = colors.HexColor("#111111")
+    cinza = colors.HexColor("#9B9B9B")
+    cinza_claro = colors.HexColor("#DCDCDC")
+    linha = colors.HexColor("#CFCFCF")
 
-    logo = orcamento.logo.path if orcamento.logo else None
-    if not logo:
-        from .models import ConfiguracaoEmpresa
-
-        configuracao = ConfiguracaoEmpresa.objects.first()
-        if configuracao and configuracao.logo:
-            logo = configuracao.logo.path
-    fallback_logo = Path(settings.BASE_DIR) / "logo2.png"
-    logo = logo or (str(fallback_logo) if fallback_logo.exists() else None)
+    empresa = _orcamento_empresa_data(orcamento)
+    logo = empresa["logo"]
+    left = 1.15 * cm
+    right = width - 1.15 * cm
+    top = height - 1.0 * cm
 
     if logo:
-        c.drawImage(logo, 2 * cm, height - 4 * cm, width=4.5 * cm, height=2 * cm, preserveAspectRatio=True, mask="auto")
+        c.drawImage(
+            logo,
+            left,
+            top - 1.55 * cm,
+            width=1.9 * cm,
+            height=1.45 * cm,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
 
     c.setFillColor(preto)
-    c.setFont("Helvetica-Bold", 26)
-    c.drawString(2 * cm, height - 5.2 * cm, f"Orçamento #{orcamento.pk}")
-    c.setFont("Helvetica", 11)
-    c.drawString(2 * cm, height - 6 * cm, f"Cliente: {orcamento.cliente.nome_completo}")
-    c.drawString(2 * cm, height - 6.6 * cm, f"CPF: {orcamento.cliente.cpf} | Email: {orcamento.cliente.email}")
-    c.drawString(2 * cm, height - 7.2 * cm, f"Pagamento: {orcamento.get_forma_pagamento_display()}")
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(left + 2.5 * cm, top - 0.25 * cm, empresa["nome"])
+    c.setFont("Helvetica-Bold", 7)
+    c.drawString(left + 2.5 * cm, top - 0.55 * cm, empresa["cnpj"])
+    c.drawString(left + 2.5 * cm, top - 0.85 * cm, empresa["endereco_linha1"])
+    c.drawString(left + 2.5 * cm, top - 1.15 * cm, empresa["endereco_linha2"])
 
-    y = height - 8.5 * cm
-    c.setFillColor(vermelho)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2 * cm, y, "Produtos")
-    y -= 0.7 * cm
-    y = _draw_items(c, y, orcamento.itens_produto.all(), lambda item: item.produto.nome)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawRightString(right, top - 0.25 * cm, empresa["email"])
+    c.drawRightString(right, top - 0.55 * cm, f"Contato: {empresa['telefone']}")
+
+    y = top - 2.25 * cm
+    c.setStrokeColor(linha)
+    c.setLineWidth(0.4)
+    c.line(left, y, right, y)
+    y -= 0.45 * cm
+
+    c.setFillColor(preto)
+    c.setFont("Helvetica", 10)
+    c.drawString(left, y + 0.15 * cm, "Dados do Cliente")
+    y -= 0.6 * cm
+    c.line(left, y + 0.25 * cm, right, y + 0.25 * cm)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(left, y, orcamento.cliente.nome_completo)
+    y -= 0.32 * cm
+    c.drawString(left, y, f"CPF/CNPJ: {orcamento.cliente.cpf}")
+    y -= 0.32 * cm
+    c.drawString(left, y, orcamento.cliente.endereco_residencial or "-")
+    y -= 0.32 * cm
+    c.drawString(left, y, orcamento.cliente.email or "")
+    c.setFont("Helvetica", 9)
+    c.drawRightString(right, y + 0.2 * cm, f"Data: {orcamento.criado_em:%d/%m/%Y}")
+    y -= 0.6 * cm
+
+    c.setFillColor(cinza)
+    c.rect(left, y - 0.08 * cm, right - left, 0.5 * cm, fill=1, stroke=0)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 10)
+    numero = f"ORÇAMENTO Nº {orcamento.pk:04d}-{str(orcamento.criado_em.year)[-2:]}"
+    c.drawCentredString(width / 2, y + 0.08 * cm, numero)
+    y -= 0.75 * cm
+
+    c.setFillColor(preto)
+    c.setFont("Helvetica", 10)
+    c.drawString(left, y, "Serviços")
+    y -= 0.35 * cm
+    c.line(left, y, right, y)
+    y -= 0.38 * cm
+
+    c.setFillColor(cinza_claro)
+    c.rect(left, y - 0.08 * cm, right - left, 0.42 * cm, fill=1, stroke=0)
+    c.setFillColor(preto)
+    c.setFont("Helvetica-Bold", 7)
+    columns = {
+        "nome": left + 0.05 * cm,
+        "quantidade": right - 7.45 * cm,
+        "unidade": right - 5.8 * cm,
+        "valor_unitario": right - 3.6 * cm,
+        "valor_total": right,
+    }
+    c.drawString(columns["nome"], y + 0.05 * cm, "Nome")
+    c.drawRightString(columns["quantidade"], y + 0.05 * cm, "Quantidade")
+    c.drawRightString(columns["unidade"], y + 0.05 * cm, "Unidade")
+    c.drawRightString(columns["valor_unitario"], y + 0.05 * cm, "Valor Unitário")
+    c.drawRightString(columns["valor_total"], y + 0.05 * cm, "Valor Total")
+    y -= 0.4 * cm
+
+    itens = list(orcamento.itens_produto.select_related("produto")) + list(orcamento.itens_servico.select_related("servico"))
+    if itens:
+        c.setFont("Helvetica-Bold", 6.5)
+        for item in itens:
+            label = _orcamento_item_label(item)
+            unidade = getattr(getattr(item, "produto", None), "unidade_medida", "un")
+            c.drawString(columns["nome"], y, label[:55])
+            c.drawRightString(columns["quantidade"], y, _format_quantity(item.quantidade))
+            c.drawRightString(columns["unidade"], y, unidade or "un")
+            c.drawRightString(columns["valor_unitario"], y, _format_brl(item.valor_unitario))
+            c.drawRightString(columns["valor_total"], y, _format_brl(item.total))
+            y -= 0.32 * cm
+    else:
+        c.setFont("Helvetica", 8)
+        c.drawString(columns["nome"], y, "Nenhum item informado.")
+        y -= 0.38 * cm
+
+    y -= 0.35 * cm
+    c.setFont("Helvetica-Bold", 7)
+    c.drawRightString(right - 2.1 * cm, y, "Total Serviços")
+    c.drawRightString(right, y, _format_brl(orcamento.subtotal_produtos + orcamento.subtotal_servicos))
+    y -= 1.15 * cm
+    c.drawRightString(right - 2.1 * cm, y, "Subtotal")
+    c.drawRightString(right, y, _format_brl(orcamento.subtotal_produtos + orcamento.subtotal_servicos))
+    y -= 0.38 * cm
+    c.drawRightString(right - 2.1 * cm, y, "Total Orçamento")
+    c.drawRightString(right, y, _format_brl(orcamento.valor_total))
+    y -= 0.75 * cm
+
+    c.setStrokeColor(linha)
+    c.line(left, y + 0.35 * cm, right, y + 0.35 * cm)
+    c.setFillColor(preto)
+    c.setFont("Helvetica", 10)
+    c.drawString(left, y, "Observações")
+    y -= 0.55 * cm
+    c.setFont("Helvetica-Bold", 7)
+    c.drawString(left, y, f"Formas de Pagamento: {orcamento.get_forma_pagamento_display()}")
+    y -= 0.3 * cm
+    c.drawString(left, y, "Condições de Pagamento: À vista, 3x sem juros")
+    y -= 0.55 * cm
+    if orcamento.observacoes:
+        c.setFont("Helvetica", 6.5)
+        for line in str(orcamento.observacoes).splitlines():
+            if not line.strip():
+                y -= 0.25 * cm
+                continue
+            c.drawString(left, y, line[:130])
+            y -= 0.28 * cm
 
     y -= 0.4 * cm
-    c.setFillColor(vermelho)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2 * cm, y, "Serviços")
-    y -= 0.7 * cm
-    y = _draw_items(c, y, orcamento.itens_servico.all(), lambda item: item.servico.nome)
+    c.setFont("Helvetica", 10)
+    c.drawString(left, y, "Fotos")
+    y -= 0.35 * cm
+    c.line(left, y, right, y)
+    y -= 0.35 * cm
+    photos = _orcamento_photos(orcamento)
+    x = left
+    for photo, caption in photos[:3]:
+        if Path(photo).exists():
+            c.drawImage(photo, x, y - 4.25 * cm, width=3.2 * cm, height=4.1 * cm, preserveAspectRatio=True, mask="auto")
+            c.setFillColor(preto)
+            c.setFont("Helvetica-Bold", 6.5)
+            _draw_wrapped_line(c, caption, x, y - 4.55 * cm, 3.2 * cm)
+            x += 3.7 * cm
 
-    c.setFillColor(amarelo)
-    c.roundRect(2 * cm, 3.1 * cm, width - 4 * cm, 1.3 * cm, 0.2 * cm, fill=1, stroke=0)
+    c.setStrokeColor(linha)
+    c.line(width / 2 - 2.2 * cm, 2.2 * cm, width / 2 + 2.2 * cm, 2.2 * cm)
     c.setFillColor(preto)
-    c.setFont("Helvetica-Bold", 18)
-    c.drawRightString(width - 2.2 * cm, 3.55 * cm, f"Total: R$ {orcamento.valor_total:.2f}")
-
-    if orcamento.observacoes:
-        style = ParagraphStyle("obs", fontName="Helvetica", fontSize=10, leading=13, textColor=preto)
-        frame = Frame(2 * cm, 1.5 * cm, width - 4 * cm, 1.2 * cm, showBoundary=0)
-        frame.addFromList([Paragraph(orcamento.observacoes, style)], c)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(width / 2, 1.8 * cm, empresa["nome"])
+    c.drawCentredString(width / 2, 1.55 * cm, empresa["telefone"])
 
     c.save()
     with output_path.open("rb") as pdf_file:
@@ -180,24 +290,107 @@ def gerar_pdf_orcamento(orcamento):
     return orcamento.arquivo_pdf
 
 
-def _draw_items(c, y, items, label_getter):
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
+def _orcamento_empresa_data(orcamento):
+    company = orcamento.company
+    fallback_logo = Path(settings.BASE_DIR) / "media/orcamentos/referencia/logo.jpeg"
+    if not fallback_logo.exists():
+        fallback_logo = Path(settings.BASE_DIR) / "logo2.png"
+
+    def pick(attr, default):
+        value = getattr(company, attr, "") if company else ""
+        return value or default
+
+    endereco = pick("endereco", "Rua Goiás - Panamericano, 60441-005 - Fortaleza/CE")
+    endereco_linha1, endereco_linha2 = _split_address(endereco)
+    logo = orcamento.logo.path if orcamento.logo else ""
+    if not logo and company and company.logo:
+        logo = company.logo.path
+    if not logo and fallback_logo.exists():
+        logo = str(fallback_logo)
+
+    return {
+        "nome": pick("nome_empresa", "Dona do Chopp Ltda"),
+        "cnpj": pick("cnpj", "44919343000120"),
+        "telefone": pick("telefone", "85981423909"),
+        "email": pick("email", "donadochopp@gmail.com"),
+        "endereco_linha1": endereco_linha1,
+        "endereco_linha2": endereco_linha2,
+        "logo": logo,
+    }
+
+
+def _split_address(endereco):
+    if " - " in endereco:
+        first, rest = endereco.split(" - ", 1)
+        return first, rest
+    if "," in endereco:
+        first, rest = endereco.split(",", 1)
+        return first.strip(), rest.strip()
+    return endereco, ""
+
+
+def _format_brl(value):
+    formatted = f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {formatted}"
+
+
+def _format_quantity(value):
+    if value == value.to_integral_value():
+        return str(int(value))
+    return f"{value:.2f}".replace(".", ",")
+
+
+def _orcamento_item_label(item):
+    if hasattr(item, "produto"):
+        produto = item.produto
+        partes = [produto.nome]
+        if produto.litros and f"{produto.litros}" not in produto.nome:
+            partes.append(f"{produto.litros} litros")
+        return " - ".join(partes)
+    return item.servico.nome
+
+
+def _orcamento_photos(orcamento):
+    photos = []
+    for item in orcamento.itens_produto.select_related("produto").prefetch_related("produto__product_images"):
+        caption = _orcamento_item_label(item)
+        for image in item.produto.product_images.all():
+            if image.imagem:
+                photos.append((image.imagem.path, caption))
+    if photos:
+        return photos
+
+    demo_photo = Path(settings.BASE_DIR) / "media/orcamentos/referencia/foto.jpeg"
+    if demo_photo.exists():
+        first_item = orcamento.itens_produto.select_related("produto").first()
+        caption = _orcamento_item_label(first_item) if first_item else "Foto do serviço"
+        return [(str(demo_photo), caption)]
+    demo_photo = Path(settings.BASE_DIR) / "galeria-chopeira-1.jpeg"
+    if demo_photo.exists():
+        first_item = orcamento.itens_produto.select_related("produto").first()
+        caption = _orcamento_item_label(first_item) if first_item else "Foto do serviço"
+        return [(str(demo_photo), caption)]
+    return []
+
+
+def _draw_wrapped_line(c, text, x, y, max_width):
+    from reportlab.pdfbase.pdfmetrics import stringWidth
     from reportlab.lib.units import cm
 
-    c.setFillColor(colors.HexColor("#191919"))
-    c.setFont("Helvetica", 10)
-    if not items:
-        c.drawString(2 * cm, y, "Nenhum item informado.")
-        return y - 0.5 * cm
+    words = text.split()
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if stringWidth(candidate, "Helvetica-Bold", 6.5) <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
 
-    for item in items:
-        if y < 5 * cm:
-            c.showPage()
-            y = A4[1] - 2 * cm
-            c.setFont("Helvetica", 10)
-        c.drawString(2 * cm, y, label_getter(item))
-        c.drawRightString(15 * cm, y, f"{item.quantidade} x R$ {item.valor_unitario:.2f}")
-        c.drawRightString(19 * cm, y, f"R$ {item.total:.2f}")
-        y -= 0.55 * cm
-    return y
+    for line in lines[:2]:
+        c.drawString(x, y, line)
+        y -= 0.25 * cm

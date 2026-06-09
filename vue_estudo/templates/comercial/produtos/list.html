@@ -9,16 +9,32 @@
 </section>
 <div class="table-wrap">
     <table class="table table-hover align-middle">
-        <thead><tr><th>Nome</th><th>Marca</th><th>Valor</th><th>Estoque</th><th>Medida</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Foto</th><th>Tipo</th><th>Nome</th><th>Marca</th><th>Valor</th><th>Estoque</th><th>Detalhes</th><th>Status</th><th></th></tr></thead>
         <tbody>
         {% for produto in produtos %}
             <tr>
-                <td>{{ produto.nome }}</td><td>{{ produto.marca }}</td><td>R$ {{ produto.valor }}</td><td>{{ produto.estoque_quantidade }}</td>
-                <td>{{ produto.medida }} {% if produto.litros %}{{ produto.litros }}L{% endif %}</td>
+                <td>
+                    {% with imagem=produto.imagem_principal %}
+                        {% if imagem %}
+                            <img src="{{ imagem.imagem.url }}" alt="{{ produto.nome }}" class="product-thumb">
+                        {% else %}
+                            <span class="product-thumb product-thumb-empty"><i class="bi bi-image"></i></span>
+                        {% endif %}
+                    {% endwith %}
+                </td>
+                <td>{{ produto.get_tipo_display }}</td>
+                <td>{{ produto.nome }}</td><td>{{ produto.marca|default:"-" }}</td><td>R$ {{ produto.valor }}</td><td>{{ produto.estoque_quantidade }}</td>
+                <td>
+                    {{ produto.medida }}
+                    {% if produto.litros %}{{ produto.litros }}L{% endif %}
+                    {% if produto.quantidade_profissionais and produto.duracao_horas %}
+                        {{ produto.quantidade_profissionais }} prof. por {{ produto.duracao_horas }}h
+                    {% endif %}
+                </td>
                 <td>{% if produto.disponivel %}<span class="badge text-bg-success">Disponível</span>{% else %}<span class="badge text-bg-secondary">Indisponível</span>{% endif %}</td>
                 <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'produto_update' produto.pk %}"><i class="bi bi-pencil"></i></a></td>
             </tr>
-        {% empty %}<tr><td colspan="7">Nenhum produto cadastrado.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="9">Nenhum produto cadastrado.</td></tr>{% endfor %}
         </tbody>
     </table>
 </div>

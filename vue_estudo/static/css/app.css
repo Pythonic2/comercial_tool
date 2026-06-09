@@ -94,6 +94,10 @@ body {
     padding: 32px;
 }
 
+.login-panel-wide {
+    width: min(760px, 94vw);
+}
+
 .login-logo {
     width: 96px;
     height: 72px;
@@ -210,6 +214,21 @@ body {
     background: #fff;
 }
 
+.product-thumb {
+    width: 58px;
+    height: 58px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    display: inline-grid;
+    place-items: center;
+}
+
+.product-thumb-empty {
+    color: var(--muted);
+}
+
 .detail-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
@@ -277,6 +296,30 @@ body {
     color: var(--muted);
     font-size: .9rem;
     margin: 10px 0 0;
+}
+
+.streamlit-placeholder {
+    min-height: 360px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--muted);
+    padding: 24px;
+}
+
+.streamlit-placeholder i {
+    display: block;
+    font-size: 2rem;
+    color: var(--brand-red);
+    margin-bottom: 10px;
+}
+
+.streamlit-placeholder p {
+    margin: 0;
+    max-width: 460px;
 }
 
 @media (max-width: 700px) {

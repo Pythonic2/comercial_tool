@@ -11,7 +11,6 @@
     <div class="surface">
         <h2 class="section-title">Dados</h2>
         <dl class="row">
-            <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ orcamento.get_status_display }}</dd>
             <dt class="col-sm-4">Pagamento</dt><dd class="col-sm-8">{{ orcamento.get_forma_pagamento_display }}</dd>
             <dt class="col-sm-4">Validade</dt><dd class="col-sm-8">{{ orcamento.validade|date:"d/m/Y"|default:"-" }}</dd>
             <dt class="col-sm-4">Total</dt><dd class="col-sm-8 fw-bold">R$ {{ orcamento.valor_total|floatformat:2 }}</dd>
@@ -28,7 +27,7 @@
         <thead><tr><th>Tipo</th><th>Item</th><th>Qtd.</th><th>Valor</th><th>Total</th></tr></thead>
         <tbody>
         {% for item in orcamento.itens_produto.all %}
-            <tr><td>Produto</td><td>{{ item.produto }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
+            <tr><td>{{ item.produto.get_tipo_display }}</td><td>{{ item.produto }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
         {% endfor %}
         {% for item in orcamento.itens_servico.all %}
             <tr><td>Serviço</td><td>{{ item.servico }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>

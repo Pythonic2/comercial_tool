@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Catálogo</p>
+        <h1>{% if produto %}Editar item{% else %}Novo produto ou serviço{% endif %}</h1>
+    </div>
+    <a href="{% url 'produto_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="surface stack">
+    {% csrf_token %}
+    <div class="form-grid">{{ form.as_p }}</div>
+
+    <h2 class="section-title">Fotos</h2>
+    {{ image_formset.management_form }}
+    <div class="line-items">
+        {% for image_form in image_formset %}
+            <div class="line-item">
+                {{ image_form.as_p }}
+            </div>
+        {% endfor %}
+    </div>
+
+    <button class="btn btn-brand" type="submit"><i class="bi bi-check2"></i> Salvar item</button>
+</form>
+{% endblock %}
