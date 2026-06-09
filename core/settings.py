@@ -57,13 +57,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": os.getenv("DATABASE_PATH", BASE_DIR / "db.sqlite3"),
+#     }
+# }
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.getenv("DATABASE_PATH", BASE_DIR / "db.sqlite3"),
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'banco2_db',
+        'USER': 'banco2_user',
+        'PASSWORD':'37192541aaSS@!',
+        'HOST':  'postgres_banco2',
+        'PORT': '5433',
+        # 'OPTIONS': {
+        #     'options': '-c search_path=ladingpageddc'
+        # }
     }
 }
-
 AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = "pt-br"
