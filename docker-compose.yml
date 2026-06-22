@@ -5,19 +5,32 @@ services:
       dockerfile: Dockerfile
     pull_policy: build
     restart: always
+    env_file:
+      - .env
     environment:
+      DJANGO_ENV: production
+      PORT: "8080"
       DEBUG: "False"
+      DJANGO_SECURE_SSL_REDIRECT: "False"
+      SECRET_KEY: "${SECRET_KEY:-local-only-change-me}"
       ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
       CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
-      SEED_DEMO_DATA: "False"
+      DB_NAME: "banco2_db"
+      DB_USER: "banco2_user"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_HOST: "postgres_banco2"
+      DB_PORT: "5432"
+      DB_SCHEMA: "ladingpageddc"
+      DB_SSLMODE: "prefer"
+      STATIC_ROOT: "/app/staticfiles"
+      MEDIA_ROOT: "/app/media"
+      SERVE_MEDIA: "true"
       STREAMLIT_DASHBOARD_URL: "https://streamlit-ddccomercialtools.gestcloud.com.br"
-      DATABASE_PATH: "/app/data/db.sqlite3"
     ports:
-      - "8011:8011"
+      - "8011:8080"
     networks:
       - pi_default
     volumes:
-      - comercial_data:/app/data
       - comercial_app:/app/media
 
   streamlit:
@@ -27,25 +40,34 @@ services:
     pull_policy: build
     restart: always
     command: >
-      sh -c "mkdir -p /app/data &&
-      if [ ! -f /app/data/db.sqlite3 ] && [ -f /app/db.sqlite3 ]; then cp /app/db.sqlite3 /app/data/db.sqlite3; fi &&
-      streamlit run main.py --server.address 0.0.0.0 --server.port 8012 --server.headless true"
+      sh -c "streamlit run main.py --server.address 0.0.0.0 --server.port 8012 --server.headless true"
+    env_file:
+      - .env
     environment:
+      DJANGO_ENV: production
       DEBUG: "False"
+      DJANGO_SECURE_SSL_REDIRECT: "False"
+      SECRET_KEY: "${SECRET_KEY:-local-only-change-me}"
       ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
       CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
+      DB_NAME: "banco2_db"
+      DB_USER: "banco2_user"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_HOST: "postgres_banco2"
+      DB_PORT: "5432"
+      DB_SCHEMA: "ladingpageddc"
+      DB_SSLMODE: "prefer"
       STREAMLIT_DASHBOARD_URL: "https://streamlit-ddccomercialtools.gestcloud.com.br"
-      DATABASE_PATH: "/app/data/db.sqlite3"
     ports:
       - "8012:8012"
     networks:
       - pi_default
     volumes:
-      - comercial_data:/app/data
       - comercial_app:/app/media
+
 volumes:
-  comercial_data:
   comercial_app:
+
 networks:
   pi_default:
     external: true

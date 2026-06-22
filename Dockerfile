@@ -1,20 +1,17 @@
-# Use uma imagem base do Python
-FROM python:3.13
+FROM python:3.13-slim
 
-# Configura o diretório de trabalho
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+
 WORKDIR /app
 
-# Copia os arquivos de requisitos e instala as dependências
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o restante do código para o contêiner
 COPY . .
-RUN chmod +x /app/entrypoint.sh
+RUN DJANGO_ENV=development python manage.py collectstatic --noinput
 
-# Comando para iniciar o servidor Django
-CMD ["/app/entrypoint.sh"]
-#CMD exec python manage.py runserver 0.0.0.0:$PORT
-#RUN pip install gunicorn
+EXPOSE 8080
 
-#CMD ["sh", "-c", "gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"]
+CMD ["sh", "-c", "exec gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers ${GUNICORN_WORKERS:-1} --threads ${GUNICORN_THREADS:-4} --timeout ${GUNICORN_TIMEOUT:-120} --access-logfile - --error-logfile -"]
