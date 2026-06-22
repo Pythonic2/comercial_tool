@@ -13,8 +13,8 @@ services:
       DEBUG: "False"
       DJANGO_SECURE_SSL_REDIRECT: "False"
       SECRET_KEY: "${SECRET_KEY:-local-only-change-me}"
-      ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
-      CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
+      ALLOWED_HOSTS: "comercialtools.gestcloud.com.br,ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
+      CSRF_TRUSTED_ORIGINS: "https://comercialtools.gestcloud.com.br,https://ddccomercialtools.gestcloud.com.br"
       DB_NAME: "banco2_db"
       DB_USER: "banco2_user"
       DB_PASSWORD: "${DB_PASSWORD}"
@@ -22,44 +22,13 @@ services:
       DB_PORT: "5432"
       DB_SCHEMA: "ladingpageddc"
       DB_SSLMODE: "prefer"
+      DB_CHANNEL_BINDING: "disable"
       STATIC_ROOT: "/app/staticfiles"
       MEDIA_ROOT: "/app/media"
       SERVE_MEDIA: "true"
-      STREAMLIT_DASHBOARD_URL: "https://streamlit-ddccomercialtools.gestcloud.com.br"
+      RUN_MIGRATIONS: "true"
     ports:
       - "8011:8080"
-    networks:
-      - pi_default
-    volumes:
-      - comercial_app:/app/media
-
-  streamlit:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    pull_policy: build
-    restart: always
-    command: >
-      sh -c "streamlit run main.py --server.address 0.0.0.0 --server.port 8012 --server.headless true"
-    env_file:
-      - .env
-    environment:
-      DJANGO_ENV: production
-      DEBUG: "False"
-      DJANGO_SECURE_SSL_REDIRECT: "False"
-      SECRET_KEY: "${SECRET_KEY:-local-only-change-me}"
-      ALLOWED_HOSTS: "ddccomercialtools.gestcloud.com.br,127.0.0.1,localhost"
-      CSRF_TRUSTED_ORIGINS: "https://ddccomercialtools.gestcloud.com.br"
-      DB_NAME: "banco2_db"
-      DB_USER: "banco2_user"
-      DB_PASSWORD: "${DB_PASSWORD}"
-      DB_HOST: "postgres_banco2"
-      DB_PORT: "5432"
-      DB_SCHEMA: "ladingpageddc"
-      DB_SSLMODE: "prefer"
-      STREAMLIT_DASHBOARD_URL: "https://streamlit-ddccomercialtools.gestcloud.com.br"
-    ports:
-      - "8012:8012"
     networks:
       - pi_default
     volumes:

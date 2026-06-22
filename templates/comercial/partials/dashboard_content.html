@@ -1,30 +1,79 @@
 <section class="metric-grid">
-    <div class="metric"><span>Vendido executado</span><strong>R$ {{ total_vendido|floatformat:2 }}</strong></div>
-    <div class="metric"><span>Orçamentos executados</span><strong>{{ orcamentos_executados }}</strong></div>
-    <div class="metric"><span>Orçamentos pendentes</span><strong>{{ orcamentos_pendentes }}</strong></div>
-    <div class="metric"><span>Eventos completos</span><strong>{{ eventos_completos }}</strong></div>
-    <div class="metric"><span>Eventos não completos</span><strong>{{ eventos_pendentes }}</strong></div>
+    <div class="metric"><span>Total vendido (executado)</span><strong>R$ {{ total_vendido|floatformat:2 }}</strong></div>
+    <div class="metric"><span>Contratos executados</span><strong>{{ contratos_executados }}</strong></div>
+    <div class="metric"><span>Aguardando data</span><strong>{{ contratos_aguardando }}</strong></div>
+    <div class="metric"><span>Atrasados</span><strong>{{ contratos_atrasados }}</strong></div>
+    <div class="metric"><span>Cancelados</span><strong>{{ contratos_cancelados }}</strong></div>
 </section>
-<section class="dashboard-columns">
-    <div class="surface">
-        <h2 class="section-title">Contratos/orçamentos ainda não executados</h2>
+
+<section class="surface dashboard-wide">
+    <h2 class="section-title">Itens vendidos em contratos executados</h2>
+    <div class="table-responsive">
         <table class="table table-sm align-middle">
-            <thead><tr><th>Cliente</th><th>Status</th><th>Total</th><th>Data</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Item</th><th>Quantidade</th><th>Valor vendido</th></tr></thead>
             <tbody>
-            {% for orcamento in pendentes %}
-                <tr><td>{{ orcamento.cliente }}</td><td>{{ orcamento.get_status_display }}</td><td>R$ {{ orcamento.valor_total|floatformat:2 }}</td><td>{{ orcamento.criado_em|date:"d/m/Y" }}</td></tr>
-            {% empty %}<tr><td colspan="4">Sem pendências.</td></tr>{% endfor %}
+            {% for item in itens_vendidos %}
+                <tr>
+                    <td>{{ item.tipo }}</td>
+                    <td>{{ item.nome }}</td>
+                    <td>{{ item.quantidade|floatformat:2 }}</td>
+                    <td>R$ {{ item.valor|floatformat:2 }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4">Nenhum item vendido no período.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="dashboard-columns mt-3">
+    <div class="surface">
+        <h2 class="section-title">Aguardando a data</h2>
+        <table class="table table-sm align-middle">
+            <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th></tr></thead>
+            <tbody>
+            {% for contrato in aguardando %}
+                <tr>
+                    <td>{{ contrato.data_evento|date:"d/m/Y"|default:"Sem data" }}</td>
+                    <td><a href="{% url 'contrato_detail' contrato.pk %}">{{ contrato.cliente }}</a></td>
+                    <td>R$ {{ contrato.valor_total|floatformat:2 }}</td>
+                </tr>
+            {% empty %}<tr><td colspan="3">Nenhum contrato aguardando.</td></tr>{% endfor %}
             </tbody>
         </table>
     </div>
     <div class="surface">
-        <h2 class="section-title">Eventos no filtro</h2>
+        <h2 class="section-title">Data vencida, não executado</h2>
         <table class="table table-sm align-middle">
-            <thead><tr><th>Data</th><th>Cliente</th><th>Status</th><th>Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Cliente</th><th>Status</th></tr></thead>
             <tbody>
-            {% for evento in eventos %}
-                <tr><td>{{ evento.data|date:"d/m/Y" }}</td><td>{{ evento.cliente }}</td><td>{{ evento.get_status_display }}</td><td>R$ {{ evento.valor_total }}</td></tr>
-            {% empty %}<tr><td colspan="4">Nenhum evento no período.</td></tr>{% endfor %}
+            {% for contrato in atrasados %}
+                <tr>
+                    <td>{{ contrato.data_evento|date:"d/m/Y" }}</td>
+                    <td><a href="{% url 'contrato_detail' contrato.pk %}">{{ contrato.cliente }}</a></td>
+                    <td>{{ contrato.get_status_display }}</td>
+                </tr>
+            {% empty %}<tr><td colspan="3">Nenhum contrato atrasado.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="surface dashboard-wide mt-3">
+    <h2 class="section-title">Contratos cancelados</h2>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead><tr><th>Data</th><th>Cliente</th><th>Contrato</th><th>Valor</th></tr></thead>
+            <tbody>
+            {% for contrato in cancelados %}
+                <tr>
+                    <td>{{ contrato.data_evento|date:"d/m/Y"|default:"-" }}</td>
+                    <td>{{ contrato.cliente }}</td>
+                    <td><a href="{% url 'contrato_detail' contrato.pk %}">{{ contrato.titulo }}</a></td>
+                    <td>R$ {{ contrato.valor_total|floatformat:2 }}</td>
+                </tr>
+            {% empty %}<tr><td colspan="4">Nenhum contrato cancelado.</td></tr>{% endfor %}
             </tbody>
         </table>
     </div>

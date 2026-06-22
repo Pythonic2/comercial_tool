@@ -14,8 +14,19 @@ class TimeStampedModel(models.Model):
 
 
 class Cliente(TimeStampedModel):
+    TIPOS_DOCUMENTO = [
+        ("cpf", "CPF"),
+        ("cnpj", "CNPJ"),
+    ]
+
     nome_completo = models.CharField(max_length=120)
-    cpf = models.CharField(max_length=14, unique=True)
+    tipo_documento = models.CharField(
+        max_length=4,
+        choices=TIPOS_DOCUMENTO,
+        default="cpf",
+        verbose_name="Tipo de pessoa",
+    )
+    documento = models.CharField(max_length=18, unique=True, verbose_name="CPF ou CNPJ")
     email = models.EmailField(max_length=120)
     endereco_residencial = models.CharField(max_length=255)
     celular = models.CharField(max_length=20)
@@ -23,37 +34,30 @@ class Cliente(TimeStampedModel):
     class Meta:
         ordering = ["nome_completo"]
 
+    @property
+    def documento_formatado(self):
+        value = "".join(filter(str.isdigit, self.documento))
+        if self.tipo_documento == "cpf" and len(value) == 11:
+            return f"{value[:3]}.{value[3:6]}.{value[6:9]}-{value[9:]}"
+        if self.tipo_documento == "cnpj" and len(value) == 14:
+            return f"{value[:2]}.{value[2:5]}.{value[5:8]}/{value[8:12]}-{value[12:]}"
+        return self.documento
+
     def __str__(self):
         return self.nome_completo
 
 
-class Marca(TimeStampedModel):
-    nome = models.CharField(max_length=80, unique=True)
-
-    class Meta:
-        ordering = ["nome"]
-
-    def __str__(self):
-        return self.nome
-
-
 class Produto(TimeStampedModel):
-    UNIDADES = [
-        ("un", "Unidade"),
-        ("lt", "Litros"),
-        ("m", "Metro"),
-        ("m2", "Metro quadrado"),
-        ("kg", "Quilo"),
-    ]
-
     nome = models.CharField(max_length=120)
-    marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="produtos")
+    imagem = models.ImageField(upload_to="produtos/", blank=True, null=True)
     disponivel = models.BooleanField(default=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     estoque_quantidade = models.PositiveIntegerField(default=0)
-    unidade_medida = models.CharField(max_length=10, choices=UNIDADES, default="un")
-    medida = models.CharField(max_length=80, blank=True)
-    litros = models.PositiveIntegerField(blank=True, null=True)
+    litros = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Litros (opcional)",
+    )
     descricao = models.TextField(blank=True)
 
     class Meta:
@@ -66,6 +70,7 @@ class Produto(TimeStampedModel):
 
 class Servico(TimeStampedModel):
     nome = models.CharField(max_length=120)
+    imagem = models.ImageField(upload_to="servicos/", blank=True, null=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     descricao = models.TextField()
     ativo = models.BooleanField(default=True)
@@ -96,13 +101,6 @@ class ConfiguracaoEmpresa(models.Model):
 
 
 class Orcamento(TimeStampedModel):
-    STATUS = [
-        ("rascunho", "Rascunho"),
-        ("enviado", "Enviado"),
-        ("aprovado", "Aprovado"),
-        ("executado", "Executado"),
-        ("cancelado", "Cancelado"),
-    ]
     FORMAS_PAGAMENTO = [
         ("dinheiro", "Dinheiro"),
         ("cartao", "Cartão"),
@@ -112,7 +110,6 @@ class Orcamento(TimeStampedModel):
 
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="orcamentos")
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    status = models.CharField(max_length=20, choices=STATUS, default="rascunho")
     validade = models.DateField(blank=True, null=True)
     forma_pagamento = models.CharField(max_length=20, choices=FORMAS_PAGAMENTO, default="pix")
     observacoes = models.TextField(blank=True)
@@ -134,6 +131,10 @@ class Orcamento(TimeStampedModel):
     @property
     def valor_total(self):
         return self.subtotal_produtos + self.subtotal_servicos - self.desconto
+
+    @property
+    def responsavel(self):
+        return self.usuario.get_full_name() or self.usuario.get_username()
 
     def get_absolute_url(self):
         return reverse("orcamento_detail", args=[self.pk])
@@ -171,10 +172,16 @@ class OrcamentoServico(models.Model):
 
 
 class Contrato(TimeStampedModel):
+    TIPOS_MODELO = [
+        ("chopeira_eletrica", "Chopeira elétrica"),
+        ("servico_comodato", "Prestação de serviços e comodato"),
+        ("personalizado", "Documento personalizado"),
+    ]
+
     STATUS = [
         ("rascunho", "Rascunho"),
         ("aguardando_assinatura", "Aguardando assinatura"),
-        ("assinado", "Assinado"),
+        ("assinado", "Assinado / aguardando data"),
         ("executado", "Executado"),
         ("cancelado", "Cancelado"),
     ]
@@ -184,7 +191,21 @@ class Contrato(TimeStampedModel):
     orcamento = models.ForeignKey(Orcamento, on_delete=models.SET_NULL, blank=True, null=True)
     titulo = models.CharField(max_length=140)
     status = models.CharField(max_length=30, choices=STATUS, default="rascunho")
-    documento_modelo = models.FileField(upload_to="documentos/modelos/")
+    tipo_modelo = models.CharField(max_length=30, choices=TIPOS_MODELO, default="chopeira_eletrica")
+    data_evento = models.DateField(blank=True, null=True, verbose_name="Data do contrato/evento")
+    endereco_evento = models.CharField(max_length=255, blank=True)
+    horario_inicio = models.TimeField(blank=True, null=True)
+    horario_fim = models.TimeField(blank=True, null=True)
+    com_profissional = models.BooleanField(default=False)
+    quantidade_profissionais = models.PositiveSmallIntegerField(default=0)
+    valor_hora_extra = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("50.00"))
+    valor_pago = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    data_pagamento = models.DateField(blank=True, null=True)
+    data_vencimento_saldo = models.DateField(blank=True, null=True)
+    prazo_chopeira_horas = models.PositiveSmallIntegerField(default=24)
+    taxa_nova_instalacao = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("250.00"))
+    cidade_assinatura = models.CharField(max_length=80, default="Fortaleza/CE")
+    documento_modelo = models.FileField(upload_to="documentos/modelos/", blank=True, null=True)
     documento_final = models.FileField(upload_to="documentos/finais/", blank=True, null=True)
     placeholders = models.JSONField(default=list, blank=True)
     valores_preenchidos = models.JSONField(default=dict, blank=True)
@@ -193,7 +214,15 @@ class Contrato(TimeStampedModel):
     observacoes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["-criado_em"]
+        ordering = ["-data_evento", "-criado_em"]
+
+    @property
+    def valor_total(self):
+        return self.orcamento.valor_total if self.orcamento else Decimal("0.00")
+
+    @property
+    def saldo_pendente(self):
+        return max(self.valor_total - self.valor_pago, Decimal("0.00"))
 
     def __str__(self):
         return f"{self.titulo} - {self.cliente}"

@@ -1,6 +1,6 @@
 param(
-    [string]$Service = "ddc-comercial-django",
-    [string]$Region = "southamerica-east1"
+    [string]$Service = "comercial-tool",
+    [string]$Region = "europe-west1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,7 +8,7 @@ $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $envPath = Join-Path $projectRoot ".env"
 
 if (-not (Test-Path -LiteralPath $envPath)) {
-    throw "Arquivo .env não encontrado. Copie .env.example para .env e preencha os valores."
+    throw "Arquivo .env não encontrado. Crie-o com as variáveis de produção antes do deploy."
 }
 
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {

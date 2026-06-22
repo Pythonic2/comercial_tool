@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Contrato{% endblock %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Contratos padronizados</p>
+        <h1>{% if instance %}Editar contrato{% else %}Novo contrato{% endif %}</h1>
+        <p class="text-muted mb-0">Preencha apenas os dados variáveis. As cláusulas são geradas pelo modelo selecionado.</p>
+    </div>
+    <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="stack">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+    <section class="surface">
+        <h2 class="section-title">Modelo e identificação</h2>
+        <div class="form-grid">
+            {{ form.tipo_modelo.as_field_group }}
+            {{ form.titulo.as_field_group }}
+            {{ form.cliente.as_field_group }}
+            {{ form.orcamento.as_field_group }}
+            {{ form.status.as_field_group }}
+            {{ form.documento_modelo.as_field_group }}
+        </div>
+    </section>
+
+    <section class="surface">
+        <h2 class="section-title">Evento</h2>
+        <div class="form-grid">
+            {{ form.data_evento.as_field_group }}
+            {{ form.horario_inicio.as_field_group }}
+            {{ form.horario_fim.as_field_group }}
+            {{ form.endereco_evento.as_field_group }}
+        </div>
+    </section>
+
+    <section class="surface">
+        <h2 class="section-title">Equipe e equipamentos</h2>
+        <div class="form-grid">
+            {{ form.com_profissional.as_field_group }}
+            {{ form.quantidade_profissionais.as_field_group }}
+            {{ form.valor_hora_extra.as_field_group }}
+            {{ form.prazo_chopeira_horas.as_field_group }}
+            {{ form.taxa_nova_instalacao.as_field_group }}
+        </div>
+    </section>
+
+    <section class="surface">
+        <h2 class="section-title">Pagamento</h2>
+        <div class="form-grid">
+            {{ form.valor_pago.as_field_group }}
+            {{ form.data_pagamento.as_field_group }}
+            {{ form.data_vencimento_saldo.as_field_group }}
+        </div>
+        <p class="text-muted mb-0">O valor total, os produtos e os serviços serão obtidos do orçamento vinculado.</p>
+    </section>
+
+    <section class="surface">
+        <h2 class="section-title">Assinatura e observações</h2>
+        <div class="form-grid">
+            {{ form.cidade_assinatura.as_field_group }}
+            {{ form.data_assinatura_cliente.as_field_group }}
+            {{ form.data_assinatura_usuario.as_field_group }}
+        </div>
+        {{ form.observacoes.as_field_group }}
+    </section>
+
+    <div class="form-actions">
+        <button class="btn btn-brand" type="submit"><i class="bi bi-file-earmark-check"></i> Salvar e gerar contrato</button>
+    </div>
+</form>
+{% endblock %}

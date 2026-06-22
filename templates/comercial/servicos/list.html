@@ -6,15 +6,24 @@
 </section>
 <div class="table-wrap">
     <table class="table table-hover align-middle">
-        <thead><tr><th>Nome</th><th>Valor</th><th>Descrição</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Foto</th><th>Nome</th><th>Valor</th><th>Descrição</th><th>Status</th><th></th></tr></thead>
         <tbody>
         {% for servico in servicos %}
             <tr>
-                <td>{{ servico.nome }}</td><td>R$ {{ servico.valor }}</td><td>{{ servico.descricao|truncatechars:80 }}</td>
+                <td>
+                    {% if servico.imagem %}
+                        <img class="item-thumb" src="{{ servico.imagem.url }}" alt="{{ servico.nome }}">
+                    {% else %}
+                        <span class="item-thumb item-thumb--empty"><i class="bi bi-image"></i></span>
+                    {% endif %}
+                </td>
+                <td>{{ servico.nome }}</td>
+                <td>R$ {{ servico.valor }}</td>
+                <td>{{ servico.descricao|truncatechars:80 }}</td>
                 <td>{% if servico.ativo %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Inativo</span>{% endif %}</td>
                 <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'servico_update' servico.pk %}"><i class="bi bi-pencil"></i></a></td>
             </tr>
-        {% empty %}<tr><td colspan="5">Nenhum serviço cadastrado.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="6">Nenhum serviço cadastrado.</td></tr>{% endfor %}
         </tbody>
     </table>
 </div>

@@ -7,7 +7,6 @@ from .models import (
     Evento,
     EventoProduto,
     EventoServico,
-    Marca,
     Orcamento,
     OrcamentoProduto,
     OrcamentoServico,
@@ -28,9 +27,9 @@ class OrcamentoServicoInline(admin.TabularInline):
 
 @admin.register(Orcamento)
 class OrcamentoAdmin(admin.ModelAdmin):
-    list_display = ["id", "cliente", "status", "valor_total", "criado_em"]
-    list_filter = ["status", "forma_pagamento", "criado_em"]
-    search_fields = ["cliente__nome_completo", "cliente__cpf"]
+    list_display = ["id", "cliente", "responsavel", "valor_total", "criado_em"]
+    list_filter = ["forma_pagamento", "criado_em"]
+    search_fields = ["cliente__nome_completo", "cliente__documento", "usuario__username"]
     inlines = [OrcamentoProdutoInline, OrcamentoServicoInline]
 
 
@@ -54,13 +53,18 @@ class EventoAdmin(admin.ModelAdmin):
 
 @admin.register(Contrato)
 class ContratoAdmin(admin.ModelAdmin):
-    list_display = ["titulo", "cliente", "status", "criado_em"]
-    list_filter = ["status", "criado_em"]
-    search_fields = ["titulo", "cliente__nome_completo", "cliente__cpf"]
+    list_display = ["titulo", "cliente", "status", "data_evento", "valor_total"]
+    list_filter = ["status", "data_evento", "criado_em"]
+    search_fields = ["titulo", "cliente__nome_completo", "cliente__documento"]
 
 
-admin.site.register(Cliente)
-admin.site.register(Marca)
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ["nome_completo", "tipo_documento", "documento_formatado", "email"]
+    list_filter = ["tipo_documento"]
+    search_fields = ["nome_completo", "documento", "email"]
+
+
 admin.site.register(Produto)
 admin.site.register(Servico)
 admin.site.register(ConfiguracaoEmpresa)

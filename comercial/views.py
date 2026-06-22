@@ -1,12 +1,11 @@
 from datetime import date
+from decimal import Decimal
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 
 from .forms import (
     ClienteForm,
@@ -15,7 +14,6 @@ from .forms import (
     EventoForm,
     EventoProdutoFormSet,
     EventoServicoFormSet,
-    MarcaForm,
     OrcamentoForm,
     OrcamentoProdutoFormSet,
     OrcamentoServicoFormSet,
@@ -23,21 +21,65 @@ from .forms import (
     ProdutoForm,
     ServicoForm,
 )
-from .models import Cliente, ConfiguracaoEmpresa, Contrato, Evento, Marca, Orcamento, Produto, Servico
-from .services import extract_placeholders, gerar_pdf_orcamento, render_document_with_values
+from .models import Cliente, ConfiguracaoEmpresa, Contrato, Evento, Orcamento, Produto, Servico
+from .services import (
+    extract_placeholders,
+    gerar_pdf_orcamento,
+    render_document_with_values,
+    render_standard_contract,
+)
 
 
 @login_required
 def home(request):
     cards = [
-        ("Produtos", "Cadastre produtos, marcas, medidas, litros e estoque.", "produto_list", "bi-box-seam"),
-        ("Serviços", "Monte serviços com descrição e valor.", "servico_list", "bi-tools"),
-        ("Orçamentos", "Crie orçamentos completos com logo, produtos e serviços.", "orcamento_list", "bi-receipt"),
-        ("Contratos", "Suba modelos com {{campos}} e gere versões preenchidas.", "contrato_list", "bi-file-earmark-text"),
-        ("Eventos", "Controle endereço, data, itens e conclusão do evento.", "evento_list", "bi-calendar-event"),
-        ("Dashboard", "Acompanhe vendas, pendências e filtros por período.", "dashboard", "bi-graph-up"),
+        ("Produtos", "Cadastre produtos, litros opcionais, valores e estoque.", "produto_list", "bi-box-seam"),
+        ("Serviços", "Cadastre serviços, descrição e valor.", "servico_list", "bi-tools"),
+        ("Orçamentos", "Crie propostas com produtos, serviços e responsável.", "orcamento_list", "bi-receipt"),
+        ("Contratos", "Formalize vendas, datas e acompanhe a execução.", "contrato_list", "bi-file-earmark-text"),
+        ("Dashboard", "Veja vendas, itens e contratos por situação.", "dashboard", "bi-graph-up"),
     ]
     return render(request, "comercial/home.html", {"cards": cards})
+
+
+def _filter_contracts_by_period(contratos, periodo, today):
+    if periodo == "mes":
+        return contratos.filter(data_evento__year=today.year, data_evento__month=today.month)
+    if periodo == "semestre":
+        start_month = 1 if today.month <= 6 else 7
+        end_month = 6 if today.month <= 6 else 12
+        return contratos.filter(
+            data_evento__year=today.year,
+            data_evento__month__gte=start_month,
+            data_evento__month__lte=end_month,
+        )
+    if periodo == "ano":
+        return contratos.filter(data_evento__year=today.year)
+    return contratos
+
+
+def _sold_items(contratos):
+    items = {}
+    for contrato in contratos:
+        if not contrato.orcamento:
+            continue
+        for item in contrato.orcamento.itens_produto.all():
+            key = ("Produto", item.produto.nome)
+            current = items.setdefault(
+                key,
+                {"tipo": "Produto", "nome": item.produto.nome, "quantidade": Decimal("0"), "valor": Decimal("0")},
+            )
+            current["quantidade"] += item.quantidade
+            current["valor"] += item.total
+        for item in contrato.orcamento.itens_servico.all():
+            key = ("Serviço", item.servico.nome)
+            current = items.setdefault(
+                key,
+                {"tipo": "Serviço", "nome": item.servico.nome, "quantidade": Decimal("0"), "valor": Decimal("0")},
+            )
+            current["quantidade"] += item.quantidade
+            current["valor"] += item.total
+    return sorted(items.values(), key=lambda item: item["valor"], reverse=True)
 
 
 @login_required
@@ -46,40 +88,37 @@ def dashboard(request):
     periodo = request.GET.get("periodo", "mes")
     today = date.today()
 
-    orcamentos = Orcamento.objects.select_related("cliente").all()
-    eventos = Evento.objects.select_related("cliente", "contrato").all()
-
-    if periodo == "mes":
-        orcamentos = orcamentos.filter(criado_em__year=today.year, criado_em__month=today.month)
-        eventos = eventos.filter(data__year=today.year, data__month=today.month)
-    elif periodo == "semestre":
-        start_month = 1 if today.month <= 6 else 7
-        end_month = 6 if today.month <= 6 else 12
-        orcamentos = orcamentos.filter(criado_em__year=today.year, criado_em__month__gte=start_month, criado_em__month__lte=end_month)
-        eventos = eventos.filter(data__year=today.year, data__month__gte=start_month, data__month__lte=end_month)
-    elif periodo == "ano":
-        orcamentos = orcamentos.filter(criado_em__year=today.year)
-        eventos = eventos.filter(data__year=today.year)
-
+    contratos = (
+        Contrato.objects.select_related("cliente", "orcamento", "usuario")
+        .prefetch_related(
+            "orcamento__itens_produto__produto",
+            "orcamento__itens_servico__servico",
+        )
+    )
+    contratos = _filter_contracts_by_period(contratos, periodo, today)
     if status:
-        eventos = eventos.filter(status=status)
+        contratos = contratos.filter(status=status)
 
-    executados = orcamentos.filter(status="executado")
-    total_vendido = sum((orcamento.valor_total for orcamento in executados), 0)
-    pendentes = orcamentos.exclude(status__in=["executado", "cancelado"])
+    executados = list(contratos.filter(status="executado"))
+    cancelados = contratos.filter(status="cancelado")
+    aguardando = contratos.exclude(status__in=["executado", "cancelado"]).filter(
+        Q(data_evento__gte=today) | Q(data_evento__isnull=True)
+    )
+    atrasados = contratos.exclude(status__in=["executado", "cancelado"]).filter(data_evento__lt=today)
+    total_vendido = sum((contrato.valor_total for contrato in executados), Decimal("0.00"))
 
     context = {
         "periodo": periodo,
         "status": status,
         "total_vendido": total_vendido,
-        "orcamentos_executados": executados.count(),
-        "orcamentos_pendentes": pendentes.count(),
-        "eventos_completos": eventos.filter(status="completo").count(),
-        "eventos_pendentes": eventos.exclude(status="completo").count(),
-        "eventos": eventos[:30],
-        "pendentes": pendentes[:30],
-        "streamlit_dashboard_url": settings.STREAMLIT_DASHBOARD_URL,
-        "embed_streamlit_dashboard": settings.STREAMLIT_DASHBOARD_URL.startswith("https://"),
+        "contratos_executados": len(executados),
+        "contratos_aguardando": aguardando.count(),
+        "contratos_atrasados": atrasados.count(),
+        "contratos_cancelados": cancelados.count(),
+        "aguardando": aguardando[:30],
+        "atrasados": atrasados[:30],
+        "cancelados": cancelados[:30],
+        "itens_vendidos": _sold_items(executados),
     }
     template = "comercial/partials/dashboard_content.html" if request.headers.get("HX-Request") else "comercial/dashboard.html"
     return render(request, template, context)
@@ -111,18 +150,8 @@ def cliente_update(request, pk):
 
 
 @login_required
-def marca_list(request):
-    return render(request, "comercial/marcas/list.html", {"marcas": Marca.objects.all()})
-
-
-@login_required
-def marca_create(request):
-    return _list_create_update(request, Marca, MarcaForm, "comercial/form.html", "marca_list")
-
-
-@login_required
 def produto_list(request):
-    return render(request, "comercial/produtos/list.html", {"produtos": Produto.objects.select_related("marca")})
+    return render(request, "comercial/produtos/list.html", {"produtos": Produto.objects.all()})
 
 
 @login_required
@@ -171,7 +200,16 @@ def _save_orcamento(request, instance=None):
         servico_formset.save()
         messages.success(request, "Orçamento salvo com sucesso.")
         return redirect(orcamento)
-    return render(request, "comercial/orcamentos/form.html", {"form": form, "produto_formset": produto_formset, "servico_formset": servico_formset, "orcamento": instance})
+    return render(
+        request,
+        "comercial/orcamentos/form.html",
+        {
+            "form": form,
+            "produto_formset": produto_formset,
+            "servico_formset": servico_formset,
+            "orcamento": instance,
+        },
+    )
 
 
 @login_required
@@ -192,7 +230,7 @@ def orcamento_detail(request, pk):
 
 @login_required
 def orcamento_pdf(request, pk):
-    orcamento = get_object_or_404(Orcamento, pk=pk)
+    orcamento = get_object_or_404(Orcamento.objects.select_related("cliente", "usuario"), pk=pk)
     arquivo = gerar_pdf_orcamento(orcamento)
     return FileResponse(arquivo.open("rb"), as_attachment=True, filename=arquivo.name.split("/")[-1])
 
@@ -203,18 +241,44 @@ def contrato_list(request):
     return render(request, "comercial/contratos/list.html", {"contratos": contratos})
 
 
-@login_required
-def contrato_create(request):
-    form = ContratoForm(request.POST or None, request.FILES or None)
+def _save_contrato(request, instance=None):
+    form = ContratoForm(request.POST or None, request.FILES or None, instance=instance)
     if request.method == "POST" and form.is_valid():
         contrato = form.save(commit=False)
-        contrato.usuario = request.user
+        if not contrato.pk:
+            contrato.usuario = request.user
         contrato.save()
-        contrato.placeholders = extract_placeholders(contrato.documento_modelo.path)
-        contrato.save(update_fields=["placeholders"])
-        messages.success(request, "Contrato criado. Agora preencha os campos encontrados.")
-        return redirect("contrato_campos", pk=contrato.pk)
-    return render(request, "comercial/form.html", {"form": form})
+        if contrato.tipo_modelo == "personalizado":
+            if contrato.documento_modelo and (
+                not instance or "documento_modelo" in form.changed_data
+            ):
+                contrato.placeholders = extract_placeholders(contrato.documento_modelo.path)
+                contrato.save(update_fields=["placeholders"])
+            messages.success(request, "Contrato salvo. Preencha os campos do documento.")
+            if contrato.placeholders:
+                return redirect("contrato_campos", pk=contrato.pk)
+        else:
+            contrato.placeholders = []
+            contrato.valores_preenchidos = {}
+            contrato.save(update_fields=["placeholders", "valores_preenchidos"])
+            render_standard_contract(contrato)
+            messages.success(request, "Contrato padrão gerado com sucesso.")
+        return redirect("contrato_detail", pk=contrato.pk)
+    return render(
+        request,
+        "comercial/contratos/form.html",
+        {"form": form, "instance": instance},
+    )
+
+
+@login_required
+def contrato_create(request):
+    return _save_contrato(request)
+
+
+@login_required
+def contrato_update(request, pk):
+    return _save_contrato(request, get_object_or_404(Contrato, pk=pk))
 
 
 @login_required
@@ -226,6 +290,9 @@ def contrato_detail(request, pk):
 @login_required
 def contrato_campos(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
+    if contrato.tipo_modelo != "personalizado":
+        messages.info(request, "Contratos padrão são preenchidos pela tela de edição.")
+        return redirect("contrato_update", pk=contrato.pk)
     if not contrato.placeholders:
         contrato.placeholders = extract_placeholders(contrato.documento_modelo.path)
         contrato.save(update_fields=["placeholders"])
@@ -234,7 +301,7 @@ def contrato_campos(request, pk):
         contrato.valores_preenchidos = form.cleaned_placeholder_values()
         contrato.save(update_fields=["valores_preenchidos"])
         render_document_with_values(contrato)
-        messages.success(request, "Documento final gerado mantendo o modelo original quando o formato permite.")
+        messages.success(request, "Documento final gerado.")
         return redirect("contrato_detail", pk=contrato.pk)
     return render(request, "comercial/contratos/campos.html", {"contrato": contrato, "form": form})
 
@@ -257,7 +324,16 @@ def _save_evento(request, instance=None):
         servico_formset.save()
         messages.success(request, "Evento salvo com sucesso.")
         return redirect("evento_list")
-    return render(request, "comercial/eventos/form.html", {"form": form, "produto_formset": produto_formset, "servico_formset": servico_formset, "evento": instance})
+    return render(
+        request,
+        "comercial/eventos/form.html",
+        {
+            "form": form,
+            "produto_formset": produto_formset,
+            "servico_formset": servico_formset,
+            "evento": instance,
+        },
+    )
 
 
 @login_required

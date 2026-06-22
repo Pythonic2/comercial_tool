@@ -1,34 +1,33 @@
 # Gestão Comercial Django
 
-Produto Django para cadastrar clientes, marcas, produtos, serviços, orçamentos, contratos com placeholders `{{campo}}`, eventos e dashboard.
+Aplicação Django para clientes CPF/CNPJ, produtos, serviços, orçamentos,
+contratos e dashboard de vendas.
 
 ## Rodar localmente
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py seed_demo_data
-python manage.py createsuperuser
-python manage.py runserver
-```
+    python -m venv venv
+    venvScriptsactivate
+    pip install -r requirements.txt
+    python manage.py migrate
+    python manage.py createsuperuser
+    python manage.py runserver
 
-Depois acesse `http://127.0.0.1:8000/login/`.
+Acesse http://127.0.0.1:8000/login/.
 
-Para abrir o dashboard em Streamlit usando a mesma base:
+O servidor de desenvolvimento aceita HTTP, não HTTPS. HTTPS é terminado pelo
+Cloud Run/Cloudflare em produção.
 
-```bash
-streamlit run main.py
-```
+## Fluxo principal
 
-## Documentos com placeholders
+1. Cadastre clientes, produtos e serviços.
+2. Crie o orçamento; o usuário autenticado fica registrado como responsável.
+3. Gere o PDF com identificação e linha de assinatura do funcionário.
+4. Crie um contrato associado ao orçamento, informe data e status.
+5. Acompanhe vendas, itens, contratos futuros, atrasados e cancelados no dashboard.
 
-Suba um modelo de contrato com campos como `{{nome}}`, `{{cpf}}`, `{{produto}}` e `{{servico}}`.
-O sistema detecta os campos e permite preencher os valores antes de gerar o documento final.
+## Contratos com placeholders
 
-Formatos suportados:
+Modelos podem conter campos como {{nome_cliente}}, {{documento}}, {{produto}}
+e {{valor_total}}.
 
-- `.docx`: preserva o layout do Word quando o placeholder está no mesmo trecho de texto.
-- `.html` e `.txt`: substitui os campos mantendo o arquivo base.
-- `.pdf`: tenta substituir os campos no local usando PyMuPDF.
+Formatos suportados: .docx, .html, .txt e .pdf.

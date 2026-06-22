@@ -1,7 +1,11 @@
 {% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
 {% block content %}
 <section class="page-header">
-    <div><p class="eyebrow">Dashboard</p><h1>Vendas, contratos e eventos</h1></div>
+    <div>
+        <p class="eyebrow">Dashboard</p>
+        <h1>Vendas e contratos</h1>
+    </div>
 </section>
 <form class="filters" hx-get="{% url 'dashboard' %}" hx-target="#dashboard-content" hx-push-url="true">
     <select class="form-select" name="periodo">
@@ -11,9 +15,11 @@
         <option value="todos" {% if periodo == "todos" %}selected{% endif %}>Todos</option>
     </select>
     <select class="form-select" name="status">
-        <option value="">Todos os eventos</option>
-        <option value="completo" {% if status == "completo" %}selected{% endif %}>Completos</option>
-        <option value="pendente" {% if status == "pendente" %}selected{% endif %}>Não completos</option>
+        <option value="">Todos os contratos</option>
+        <option value="rascunho" {% if status == "rascunho" %}selected{% endif %}>Rascunhos</option>
+        <option value="aguardando_assinatura" {% if status == "aguardando_assinatura" %}selected{% endif %}>Aguardando assinatura</option>
+        <option value="assinado" {% if status == "assinado" %}selected{% endif %}>Assinados / aguardando data</option>
+        <option value="executado" {% if status == "executado" %}selected{% endif %}>Executados</option>
         <option value="cancelado" {% if status == "cancelado" %}selected{% endif %}>Cancelados</option>
     </select>
     <button class="btn btn-brand" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
@@ -21,28 +27,4 @@
 <div id="dashboard-content">
     {% include "comercial/partials/dashboard_content.html" %}
 </div>
-<section class="streamlit-panel">
-    <div class="streamlit-panel__header">
-        <div>
-            <p class="eyebrow">Gráficos interativos</p>
-            <h2 class="section-title">Dashboard Streamlit</h2>
-        </div>
-        <a class="btn btn-outline-dark btn-sm" href="{{ streamlit_dashboard_url }}" target="_blank" rel="noopener">
-            <i class="bi bi-box-arrow-up-right"></i> Abrir em nova aba
-        </a>
-    </div>
-    {% if embed_streamlit_dashboard %}
-        <iframe
-            class="streamlit-frame"
-            src="{{ streamlit_dashboard_url }}"
-            title="Dashboard Streamlit"
-            loading="lazy"
-        ></iframe>
-    {% else %}
-        <div class="streamlit-placeholder">
-            <i class="bi bi-shield-lock"></i>
-            <p>Abra os gráficos em uma nova aba enquanto o Streamlit não estiver publicado em HTTPS.</p>
-        </div>
-    {% endif %}
-</section>
 {% endblock %}

@@ -5,7 +5,9 @@
 <section class="login-wrap">
     <div class="login-panel">
         <img src="{% static 'img/logo2.png' %}" alt="Logo" class="login-logo">
-        <h1>Entrar na plataforma</h1>
+        <p class="eyebrow">Acesso administrativo</p>
+        <h1>Gestão Comercial</h1>
+        <p class="text-secondary">Entre com seu usuário para criar orçamentos e administrar contratos.</p>
         <form method="post" class="stack">
             {% csrf_token %}
             {% if form.errors %}
@@ -19,6 +21,7 @@
                 <label class="form-label" for="{{ form.password.id_for_label }}">Senha</label>
                 <input class="form-control" type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" required>
             </div>
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
             <button class="btn btn-brand w-100" type="submit">Entrar</button>
         </form>
     </div>

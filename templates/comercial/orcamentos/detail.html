@@ -11,29 +11,38 @@
     <div class="surface">
         <h2 class="section-title">Dados</h2>
         <dl class="row">
-            <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ orcamento.get_status_display }}</dd>
+            <dt class="col-sm-4">Data do orçamento</dt><dd class="col-sm-8">{{ orcamento.criado_em|date:"d/m/Y" }}</dd>
             <dt class="col-sm-4">Pagamento</dt><dd class="col-sm-8">{{ orcamento.get_forma_pagamento_display }}</dd>
             <dt class="col-sm-4">Validade</dt><dd class="col-sm-8">{{ orcamento.validade|date:"d/m/Y"|default:"-" }}</dd>
+            <dt class="col-sm-4">Responsável</dt><dd class="col-sm-8">{{ orcamento.responsavel }}</dd>
             <dt class="col-sm-4">Total</dt><dd class="col-sm-8 fw-bold">R$ {{ orcamento.valor_total|floatformat:2 }}</dd>
         </dl>
     </div>
     <div class="surface">
         <h2 class="section-title">Cliente</h2>
-        <p>{{ orcamento.cliente.nome_completo }}<br>{{ orcamento.cliente.cpf }}<br>{{ orcamento.cliente.email }}</p>
+        <p>
+            {{ orcamento.cliente.nome_completo }}<br>
+            {{ orcamento.cliente.get_tipo_documento_display }}: {{ orcamento.cliente.documento_formatado }}<br>
+            {{ orcamento.cliente.email }}
+        </p>
     </div>
 </section>
 <section class="surface mt-3">
     <h2 class="section-title">Itens</h2>
     <table class="table">
-        <thead><tr><th>Tipo</th><th>Item</th><th>Qtd.</th><th>Valor</th><th>Total</th></tr></thead>
+        <thead><tr><th>Foto</th><th>Tipo</th><th>Item</th><th>Qtd.</th><th>Valor</th><th>Total</th></tr></thead>
         <tbody>
         {% for item in orcamento.itens_produto.all %}
-            <tr><td>Produto</td><td>{{ item.produto }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
+            <tr><td>{% if item.produto.imagem %}<img class="item-thumb item-thumb--compact" src="{{ item.produto.imagem.url }}" alt="{{ item.produto.nome }}">{% else %}-{% endif %}</td><td>Produto</td><td>{{ item.produto }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
         {% endfor %}
         {% for item in orcamento.itens_servico.all %}
-            <tr><td>Serviço</td><td>{{ item.servico }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
+            <tr><td>{% if item.servico.imagem %}<img class="item-thumb item-thumb--compact" src="{{ item.servico.imagem.url }}" alt="{{ item.servico.nome }}">{% else %}-{% endif %}</td><td>Serviço</td><td>{{ item.servico }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.valor_unitario }}</td><td>R$ {{ item.total|floatformat:2 }}</td></tr>
         {% endfor %}
         </tbody>
     </table>
+</section>
+<section class="surface mt-3 signature-area">
+    <p><strong>Funcionário responsável:</strong> {{ orcamento.responsavel }}</p>
+    <div class="signature-line">Assinatura do funcionário</div>
 </section>
 {% endblock %}

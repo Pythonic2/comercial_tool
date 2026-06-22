@@ -132,7 +132,11 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if IS_PRODUCTION
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
     },
 }
 
@@ -144,7 +148,3 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
-STREAMLIT_DASHBOARD_URL = env(
-    "STREAMLIT_DASHBOARD_URL",
-    default="http://127.0.0.1:8501",
-)
