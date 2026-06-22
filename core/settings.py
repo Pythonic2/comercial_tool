@@ -82,23 +82,31 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 if IS_PRODUCTION:
+    db_host = env("DB_HOST")
+    db_schema = env("DB_SCHEMA", default="public")
     database_options = {
-        "options": f"-c search_path={env('DB_SCHEMA', default='public')}",
         "connect_timeout": env.int("DB_CONNECT_TIMEOUT", default=10),
         "sslmode": env("DB_SSLMODE", default="require"),
         "channel_binding": env("DB_CHANNEL_BINDING", default="require"),
     }
+    if db_schema != "public" and "-pooler." not in db_host:
+        database_options["options"] = f"-c search_path={db_schema}"
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": env("DB_NAME"),
             "USER": env("DB_USER"),
             "PASSWORD": env("DB_PASSWORD"),
-            "HOST": env("DB_HOST"),
+            "HOST": db_host,
             "PORT": env.int("DB_PORT", default=5432),
             "OPTIONS": database_options,
             "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=60),
             "CONN_HEALTH_CHECKS": True,
+            "DISABLE_SERVER_SIDE_CURSORS": env.bool(
+                "DB_DISABLE_SERVER_SIDE_CURSORS",
+                default="-pooler." in db_host,
+            ),
         }
     }
 else:
