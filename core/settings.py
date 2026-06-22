@@ -86,6 +86,7 @@ if IS_PRODUCTION:
         "options": f"-c search_path={env('DB_SCHEMA', default='public')}",
         "connect_timeout": env.int("DB_CONNECT_TIMEOUT", default=10),
         "sslmode": env("DB_SSLMODE", default="require"),
+        "channel_binding": env("DB_CHANNEL_BINDING", default="require"),
     }
     DATABASES = {
         "default": {
