@@ -1,21 +1,16 @@
 #!/bin/sh
-set -e
+set -eu
 
-mkdir -p /app/data /app/media
+case "${RUN_MIGRATIONS:-false}" in
+    true|True|TRUE|1|yes|Yes|YES)
+        if [ "${DJANGO_ENV:-}" != "production" ]; then
+            echo "ERROR: RUN_MIGRATIONS requires DJANGO_ENV=production." >&2
+            exit 1
+        fi
 
-if [ ! -f /app/data/db.sqlite3 ] && [ -f /app/db.sqlite3 ]; then
-    cp /app/db.sqlite3 /app/data/db.sqlite3
-fi
+        python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings'); from django.conf import settings; db = settings.DATABASES['default']; assert db['ENGINE'] == 'django.db.backends.postgresql', 'Migrations blocked: database is not PostgreSQL'; print('Migrations on PostgreSQL: {}/{}'.format(db['HOST'], db['NAME']))"
+        python manage.py migrate --noinput
+        ;;
+esac
 
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
-
-if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then
-    python manage.py createsuperuser --noinput || true
-fi
-
-if [ "$SEED_DEMO_DATA" = "True" ]; then
-    python manage.py seed_demo_data
-fi
-
-python manage.py runserver 0.0.0.0:8011
+exec gunicorn core.wsgi:application --bind "0.0.0.0:${PORT:-8080}" --workers "${GUNICORN_WORKERS:-1}" --threads "${GUNICORN_THREADS:-4}" --timeout "${GUNICORN_TIMEOUT:-120}" --access-logfile - --error-logfile -
