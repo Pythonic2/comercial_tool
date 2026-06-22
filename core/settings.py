@@ -21,13 +21,32 @@ else:
     SECRET_KEY = env("SECRET_KEY", default="dev-secret-key-change-me")
 
 DEBUG = env.bool("DEBUG", default=not IS_PRODUCTION)
-ALLOWED_HOSTS = env.list(
-    "ALLOWED_HOSTS",
-    default=[".run.app"] if IS_PRODUCTION else ["127.0.0.1", "localhost"],
+PUBLIC_HOSTS = [
+    "comercialtools.gestcloud.com.br",
+    "ddccomercialtools.gestcloud.com.br",
+]
+PUBLIC_CSRF_ORIGINS = [
+    "https://comercialtools.gestcloud.com.br",
+    "https://ddccomercialtools.gestcloud.com.br",
+]
+
+ALLOWED_HOSTS = list(
+    dict.fromkeys(
+        env.list(
+            "ALLOWED_HOSTS",
+            default=[".run.app"] if IS_PRODUCTION else ["127.0.0.1", "localhost"],
+        )
+        + PUBLIC_HOSTS
+    )
 )
-CSRF_TRUSTED_ORIGINS = env.list(
-    "CSRF_TRUSTED_ORIGINS",
-    default=["https://*.run.app"] if IS_PRODUCTION else [],
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        env.list(
+            "CSRF_TRUSTED_ORIGINS",
+            default=["https://*.run.app"] if IS_PRODUCTION else [],
+        )
+        + PUBLIC_CSRF_ORIGINS
+    )
 )
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
