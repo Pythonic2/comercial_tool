@@ -24,9 +24,12 @@ urlpatterns = [
     path("contratos/novo/", views.contrato_create, name="contrato_create"),
     path("contratos/<int:pk>/", views.contrato_detail, name="contrato_detail"),
     path("contratos/<int:pk>/editar/", views.contrato_update, name="contrato_update"),
+    path("contratos/<int:pk>/modelo/", views.contrato_documento_modelo, name="contrato_documento_modelo"),
+    path("contratos/<int:pk>/documento/", views.contrato_documento_final, name="contrato_documento_final"),
     path("contratos/<int:pk>/campos/", views.contrato_campos, name="contrato_campos"),
     path("eventos/", views.evento_list, name="evento_list"),
     path("eventos/novo/", views.evento_create, name="evento_create"),
     path("eventos/<int:pk>/editar/", views.evento_update, name="evento_update"),
     path("configuracao/", views.configuracao_empresa, name="configuracao_empresa"),
 ]
+

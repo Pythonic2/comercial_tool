@@ -174,6 +174,8 @@ class OrcamentoServico(models.Model):
 class Contrato(TimeStampedModel):
     TIPOS_MODELO = [
         ("chopeira_eletrica", "Chopeira elétrica"),
+        ("casamento", "Casamento"),
+        ("contrato_modelo", "Contrato modelo"),
         ("servico_comodato", "Prestação de serviços e comodato"),
         ("personalizado", "Documento personalizado"),
     ]
@@ -275,3 +277,4 @@ class EventoServico(models.Model):
 
     def __str__(self):
         return f"{self.evento} - {self.servico} ({self.quantidade})"
+

@@ -8,6 +8,38 @@ from django.utils import timezone
 
 PLACEHOLDER_RE = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")
 
+FIXED_CONTRACT_TEMPLATES = {
+    "chopeira_eletrica": {
+        "filename": "contrato_chopeira_eletrica.docx",
+        "download_name": "Contrato Chopeira Eletrica.docx",
+    },
+    "casamento": {
+        "filename": "contrato_casamento.docx",
+        "download_name": "Contrato Casamento.docx",
+    },
+    "contrato_modelo": {
+        "filename": "contrato_modelo.docx",
+        "download_name": "Contrato Modelo.docx",
+    },
+}
+
+
+def fixed_contract_template_path(tipo_modelo):
+    template = FIXED_CONTRACT_TEMPLATES.get(tipo_modelo)
+    if not template:
+        return None
+    return Path(settings.BASE_DIR) / "comercial" / "contract_templates" / template["filename"]
+
+
+def fixed_contract_download_name(tipo_modelo):
+    template = FIXED_CONTRACT_TEMPLATES.get(tipo_modelo)
+    return template["download_name"] if template else None
+
+
+def has_fixed_contract_template(tipo_modelo):
+    path = fixed_contract_template_path(tipo_modelo)
+    return bool(path and path.exists())
+
 
 def extract_placeholders(file_path):
     path = Path(file_path)
@@ -60,6 +92,31 @@ def render_document_with_values(contrato):
 
     return contrato.documento_final
 
+
+def render_fixed_contract_template(contrato):
+    original = fixed_contract_template_path(contrato.tipo_modelo)
+    if not original or not original.exists():
+        raise FileNotFoundError("Modelo fixo de contrato nao encontrado.")
+
+    output_dir = Path(settings.MEDIA_ROOT) / "documentos" / "finais"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_name = f"contrato_{contrato.pk}_{timezone.now().strftime('%Y%m%d%H%M%S')}{original.suffix}"
+    output_path = output_dir / output_name
+    values = contrato.valores_preenchidos or {}
+    suffix = original.suffix.lower()
+
+    if suffix == ".docx":
+        _render_docx(original, output_path, values)
+    elif suffix == ".pdf":
+        _render_pdf(original, output_path, values)
+    else:
+        text = original.read_text(encoding="utf-8", errors="ignore")
+        output_path.write_text(_replace_text(text, values), encoding="utf-8")
+
+    with output_path.open("rb") as final_file:
+        contrato.documento_final.save(output_name, File(final_file), save=True)
+
+    return contrato.documento_final
 
 def _replace_text(text, values):
     for key, value in values.items():
@@ -562,3 +619,4 @@ def _dinheiro_pdf(value):
 def _numero_pdf(value):
     text = f"{value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
     return text.rstrip("0").rstrip(",")
+
