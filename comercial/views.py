@@ -265,16 +265,6 @@ def _save_contrato(request, instance=None):
             messages.success(request, "Contrato salvo. Preencha os campos do documento.")
             if contrato.placeholders:
                 return redirect("contrato_campos", pk=contrato.pk)
-        elif has_fixed_contract_template(contrato.tipo_modelo):
-            template_path = fixed_contract_template_path(contrato.tipo_modelo)
-            contrato.placeholders = extract_placeholders(template_path)
-            contrato.valores_preenchidos = {}
-            contrato.save(update_fields=["placeholders", "valores_preenchidos"])
-            if contrato.placeholders:
-                messages.success(request, "Contrato salvo. Preencha os campos do modelo fixo.")
-                return redirect("contrato_campos", pk=contrato.pk)
-            render_fixed_contract_template(contrato)
-            messages.success(request, "Contrato gerado pelo modelo fixo.")
         else:
             contrato.placeholders = []
             contrato.valores_preenchidos = {}
@@ -310,20 +300,21 @@ def contrato_detail(request, pk):
         "tem_documento_final": bool(
             contrato.documento_final or contrato.tipo_modelo != "personalizado"
         ),
+        "tem_campos_editaveis": bool(
+            contrato.tipo_modelo == "personalizado" and contrato.placeholders
+        ),
     }
     return render(request, "comercial/contratos/detail.html", context)
 
 
 def _regenerate_contract_if_needed(contrato):
+    if contrato.tipo_modelo != "personalizado":
+        return render_standard_contract(contrato)
     if contrato.documento_final and contrato.documento_final.storage.exists(contrato.documento_final.name):
         return contrato.documento_final
-    if contrato.tipo_modelo == "personalizado":
-        if not contrato.documento_modelo:
-            raise Http404("Contrato sem documento modelo.")
-        return render_document_with_values(contrato)
-    if has_fixed_contract_template(contrato.tipo_modelo):
-        return render_fixed_contract_template(contrato)
-    return render_standard_contract(contrato)
+    if not contrato.documento_modelo:
+        raise Http404("Contrato sem documento modelo.")
+    return render_document_with_values(contrato)
 
 
 @login_required
@@ -357,11 +348,11 @@ def contrato_documento_modelo(request, pk):
 @login_required
 def contrato_campos(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
-    if not contrato.placeholders:
-        if contrato.tipo_modelo == "personalizado" and contrato.documento_modelo:
-            contrato.placeholders = extract_placeholders(contrato.documento_modelo.path)
-        elif has_fixed_contract_template(contrato.tipo_modelo):
-            contrato.placeholders = extract_placeholders(fixed_contract_template_path(contrato.tipo_modelo))
+    if contrato.tipo_modelo != "personalizado":
+        messages.info(request, "Contratos padrão são preenchidos pela tela de edição.")
+        return redirect("contrato_update", pk=contrato.pk)
+    if not contrato.placeholders and contrato.documento_modelo:
+        contrato.placeholders = extract_placeholders(contrato.documento_modelo.path)
         contrato.save(update_fields=["placeholders"])
     if not contrato.placeholders:
         messages.info(request, "Este modelo não possui campos editáveis.")
@@ -370,10 +361,7 @@ def contrato_campos(request, pk):
     if request.method == "POST" and form.is_valid():
         contrato.valores_preenchidos = form.cleaned_placeholder_values()
         contrato.save(update_fields=["valores_preenchidos"])
-        if contrato.tipo_modelo == "personalizado":
-            render_document_with_values(contrato)
-        else:
-            render_fixed_contract_template(contrato)
+        render_document_with_values(contrato)
         messages.success(request, "Documento final gerado.")
         return redirect("contrato_detail", pk=contrato.pk)
     return render(request, "comercial/contratos/campos.html", {"contrato": contrato, "form": form})

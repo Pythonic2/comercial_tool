@@ -150,3 +150,49 @@ class CommercialFlowTests(TestCase):
             self.assertIn("Rua do Evento, 100", text)
             self.assertIn("R$ 200,00", text)
             self.assertIn("R$ 150,00", text)
+
+    def test_standard_contract_form_skips_placeholder_screen_and_uses_budget_data(self):
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.post(
+                reverse("contrato_create"),
+                data={
+                    "tipo_modelo": "chopeira_eletrica",
+                    "cliente": self.cliente.pk,
+                    "orcamento": self.orcamento.pk,
+                    "titulo": "Contrato pelo formulario",
+                    "status": "rascunho",
+                    "data_evento": "2026-07-10",
+                    "endereco_evento": "Rua do Evento, 100",
+                    "horario_inicio": "18:00",
+                    "horario_fim": "22:00",
+                    "com_profissional": "on",
+                    "quantidade_profissionais": "1",
+                    "valor_hora_extra": "50.00",
+                    "valor_pago": "50.00",
+                    "data_pagamento": "",
+                    "data_vencimento_saldo": "",
+                    "prazo_chopeira_horas": "24",
+                    "taxa_nova_instalacao": "250.00",
+                    "cidade_assinatura": "Fortaleza/CE",
+                    "data_assinatura_cliente": "",
+                    "data_assinatura_usuario": "",
+                    "observacoes": "",
+                },
+            )
+
+            contrato = Contrato.objects.latest("pk")
+            self.assertRedirects(response, reverse("contrato_detail", args=[contrato.pk]))
+            self.assertEqual(contrato.placeholders, [])
+            self.assertTrue(contrato.documento_final)
+
+            from docx import Document
+
+            document = Document(contrato.documento_final.path)
+            text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+            self.assertIn("Cliente Teste", text)
+            self.assertIn("Produto sem litros", text)
+            self.assertIn("Rua do Evento, 100", text)
+            self.assertNotIn("Kaua", text)
+            self.assertNotIn("{{NOME}}", text)
+            self.assertNotIn("{{CONTRATADA}}", text)
+

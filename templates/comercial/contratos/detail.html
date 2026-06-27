@@ -4,7 +4,7 @@
     <div><p class="eyebrow">Contrato</p><h1>{{ contrato.titulo }}</h1></div>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-dark" href="{% url 'contrato_update' contrato.pk %}"><i class="bi bi-pencil"></i> Editar</a>
-        {% if contrato.placeholders %}<a class="btn btn-brand" href="{% url 'contrato_campos' contrato.pk %}"><i class="bi bi-input-cursor-text"></i> Preencher campos</a>{% endif %}
+        {% if tem_campos_editaveis %}<a class="btn btn-brand" href="{% url 'contrato_campos' contrato.pk %}"><i class="bi bi-input-cursor-text"></i> Preencher campos</a>{% endif %}
     </div>
 </section>
 <section class="surface stack">
@@ -17,7 +17,7 @@
     <p><strong>Pagamento:</strong> R$ {{ contrato.valor_pago|floatformat:2 }} pagos; saldo de R$ {{ contrato.saldo_pendente|floatformat:2 }}</p>
     <p><strong>Valor:</strong> R$ {{ contrato.valor_total|floatformat:2 }}</p>
     <p><strong>Responsável:</strong> {{ contrato.usuario.get_full_name|default:contrato.usuario.username }}</p>
-    {% if contrato.placeholders %}
+    {% if tem_campos_editaveis %}
     <p><strong>Campos encontrados:</strong>
         {% for campo in contrato.placeholders %}<span class="badge text-bg-light border">{{ campo }}</span>{% empty %}nenhum{% endfor %}
     </p>
