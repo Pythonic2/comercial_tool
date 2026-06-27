@@ -2,6 +2,5 @@
 __pycache__/
 **/__pycache__/
 *.pyc
-media/
 .env
 contrato_orcamento.pdf
