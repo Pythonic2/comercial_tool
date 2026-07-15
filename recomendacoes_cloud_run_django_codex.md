@@ -16,8 +16,6 @@ Django + Gunicorn + WhiteNoise
 PostgreSQL externo, preferencialmente Neon
 ```
 
-O Streamlit deve ser publicado depois, como um segundo serviço independente no Cloud Run.
-
 ---
 
 ## Decisões principais
@@ -214,11 +212,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
-
-STREAMLIT_DASHBOARD_URL = os.getenv(
-    "STREAMLIT_DASHBOARD_URL",
-    "http://127.0.0.1:8501",
-)
 ```
 
 ---
@@ -240,8 +233,6 @@ DB_PASSWORD=SENHA_DO_NEON
 DB_HOST=HOST_DO_NEON
 DB_PORT=5432
 DB_SSLMODE=require
-
-STREAMLIT_DASHBOARD_URL=https://URL_DO_STREAMLIT
 ```
 
 No Neon, a string recebida terá formato parecido com:
@@ -373,44 +364,6 @@ Dentro da mesma rede Docker, normalmente deve ser usado:
 
 ```text
 postgres_banco2:5432
-```
-
----
-
-## Django e Streamlit no Cloud Run
-
-O projeto possui dois servidores HTTP:
-
-```text
-Django
-Streamlit
-```
-
-No Cloud Run, criar dois serviços:
-
-```text
-ddc-comercial-django
-ddc-comercial-streamlit
-```
-
-Não tentar publicar Django e Streamlit em portas diferentes dentro do mesmo serviço inicial.
-
-Primeira etapa:
-
-```text
-Publicar somente o Django.
-```
-
-Segunda etapa:
-
-```text
-Publicar o Streamlit separadamente.
-```
-
-Depois atualizar:
-
-```env
-STREAMLIT_DASHBOARD_URL=https://servico-streamlit-xxxxx.run.app
 ```
 
 ---
@@ -643,12 +596,11 @@ Comportamento esperado do armazenamento efêmero do Cloud Run. Migrar mídia par
 7. Confirmar dependências.
 8. Não remover o funcionamento local no Docker.
 9. Ajustar o Compose local para usar a porta interna `8080`.
-10. Não publicar o Streamlit junto com o Django.
-11. Não executar migrations automaticamente no startup.
-12. Criar um `.env.example` sem senhas reais.
-13. Atualizar o `.gitignore`.
-14. Executar validações locais.
-15. Mostrar todas as alterações antes de aplicá-las.
+10. Não executar migrations automaticamente no startup.
+11. Criar um `.env.example` sem senhas reais.
+12. Atualizar o `.gitignore`.
+13. Executar validações locais.
+14. Mostrar todas as alterações antes de aplicá-las.
 
 ---
 
@@ -666,7 +618,6 @@ Objetivos:
 - usar WhiteNoise;
 - usar variáveis de ambiente;
 - manter min-instances=0 e max-instances=1;
-- não incluir o Streamlit no mesmo serviço;
 - não executar migrations automaticamente na inicialização;
 - não armazenar credenciais no código;
 - não quebrar o funcionamento local.
@@ -685,10 +636,9 @@ Tarefas:
 11. Use postgres_banco2:5432 somente no ambiente local.
 12. Crie um .env.example seguro.
 13. Garanta que .env e credenciais estejam no .gitignore.
-14. Não altere o Streamlit além do necessário.
-15. Antes de editar, apresente o plano e os arquivos que serão modificados.
-16. Depois, aplique as mudanças e mostre o diff final.
-17. Informe os comandos para validar localmente e publicar no Cloud Run.
+14. Antes de editar, apresente o plano e os arquivos que serão modificados.
+15. Depois, aplique as mudanças e mostre o diff final.
+16. Informe os comandos para validar localmente e publicar no Cloud Run.
 
 Considere que os uploads em /app/media não são persistentes no Cloud Run. Não implemente Cloud Storage agora, apenas documente essa limitação.
 ```
@@ -707,6 +657,5 @@ Ao final, o projeto deve:
 - servir arquivos estáticos com WhiteNoise;
 - escutar corretamente na porta do Cloud Run;
 - usar uma única instância no primeiro teste;
-- manter Django e Streamlit como serviços separados;
 - estar preparado para migrar uploads para Cloud Storage ou R2 futuramente.
 ```

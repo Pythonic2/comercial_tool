@@ -31,6 +31,7 @@ from .services import (
     render_document_with_values,
     render_fixed_contract_template,
     render_standard_contract,
+    render_standard_contract_pdf,
 )
 
 
@@ -140,7 +141,7 @@ def _list_create_update(request, model, form_class, template, redirect_name, pk=
 
 @login_required
 def cliente_list(request):
-    return render(request, "comercial/clientes/list.html", {"clientes": Cliente.objects.all()})
+    return render(request, "comercial/clientes/list.html", {"clientes": Cliente.objects.all().order_by("-id")})
 
 
 @login_required
@@ -303,12 +304,15 @@ def contrato_detail(request, pk):
         "tem_campos_editaveis": bool(
             contrato.tipo_modelo == "personalizado" and contrato.placeholders
         ),
+        "tem_pdf": contrato.tipo_modelo != "personalizado",
     }
     return render(request, "comercial/contratos/detail.html", context)
 
 
-def _regenerate_contract_if_needed(contrato):
+def _regenerate_contract_if_needed(contrato, formato="docx"):
     if contrato.tipo_modelo != "personalizado":
+        if formato == "pdf":
+            return render_standard_contract_pdf(contrato)
         return render_standard_contract(contrato)
     if contrato.documento_final and contrato.documento_final.storage.exists(contrato.documento_final.name):
         return contrato.documento_final
@@ -320,7 +324,8 @@ def _regenerate_contract_if_needed(contrato):
 @login_required
 def contrato_documento_final(request, pk):
     contrato = get_object_or_404(Contrato.objects.select_related("cliente", "usuario", "orcamento"), pk=pk)
-    arquivo = _regenerate_contract_if_needed(contrato)
+    formato = "pdf" if request.GET.get("formato") == "pdf" else "docx"
+    arquivo = _regenerate_contract_if_needed(contrato, formato)
     return FileResponse(arquivo.open("rb"), as_attachment=True, filename=arquivo.name.split("/")[-1])
 
 

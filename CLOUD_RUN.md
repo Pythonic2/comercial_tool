@@ -1,6 +1,6 @@
 # Deploy do Django no Google Cloud Run
 
-O primeiro deploy publica somente o Django. O Streamlit deve virar outro serviço.
+Este deploy publica o Django.
 
 ## Configuração sugerida
 

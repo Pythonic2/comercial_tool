@@ -27,7 +27,10 @@
             <a class="btn btn-outline-dark" href="{% url 'contrato_documento_modelo' contrato.pk %}"><i class="bi bi-download"></i> Modelo original</a>
         {% endif %}
         {% if tem_documento_final %}
-            <a class="btn btn-brand" href="{% url 'contrato_documento_final' contrato.pk %}"><i class="bi bi-download"></i> Documento final</a>
+            <a class="btn btn-brand" href="{% url 'contrato_documento_final' contrato.pk %}"><i class="bi bi-download"></i> Documento final (DOCX)</a>
+            {% if tem_pdf %}
+            <a class="btn btn-outline-danger" href="{% url 'contrato_documento_final' contrato.pk %}?formato=pdf"><i class="bi bi-file-earmark-pdf"></i> Documento final (PDF)</a>
+            {% endif %}
         {% endif %}
     </p>
 </section>

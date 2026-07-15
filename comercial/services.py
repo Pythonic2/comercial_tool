@@ -166,11 +166,7 @@ def _render_pdf(original, output_path, values):
         doc.save(str(output_path))
 
 
-def render_standard_contract(contrato):
-    from docx import Document
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Pt
-
+def _standard_contract_content(contrato):
     from .models import ConfiguracaoEmpresa
 
     empresa = ConfiguracaoEmpresa.objects.first()
@@ -179,6 +175,216 @@ def render_standard_contract(contrato):
     endereco_empresa = empresa.endereco if empresa and empresa.endereco else ""
     email_empresa = empresa.email if empresa and empresa.email else ""
     telefone_empresa = empresa.telefone if empresa and empresa.telefone else ""
+
+    cliente = contrato.cliente
+    title = (
+        "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – CHOPEIRA ELÉTRICA"
+        if contrato.tipo_modelo == "chopeira_eletrica"
+        else "CONTRATO DE PRESTAÇÃO DE SERVIÇOS E COMODATO"
+    )
+
+    blocks = []
+    blocks.append(("heading", "CONTRATANTE"))
+    contratante_parts = [
+        cliente.nome_completo,
+        f"{cliente.get_tipo_documento_display()} nº {cliente.documento_formatado}",
+        f"telefone: {cliente.celular}",
+    ]
+    if cliente.email:
+        contratante_parts.append(f"e-mail: {cliente.email}")
+    contratante_parts.append(f"residente em {cliente.endereco_residencial}")
+    blocks.append(
+        ("para", ", ".join(contratante_parts) + ", doravante denominado(a) CONTRATANTE.")
+    )
+
+    blocks.append(("heading", "CONTRATADA"))
+    company_parts = [nome_empresa]
+    if cnpj_empresa:
+        company_parts.append(f"CNPJ nº {cnpj_empresa}")
+    if endereco_empresa:
+        company_parts.append(f"com sede em {endereco_empresa}")
+    if email_empresa:
+        company_parts.append(f"e-mail: {email_empresa}")
+    if telefone_empresa:
+        company_parts.append(f"telefone: {telefone_empresa}")
+    blocks.append(
+        ("para", ", ".join(company_parts) + ", doravante denominada CONTRATADA.")
+    )
+    blocks.append(
+        (
+            "para",
+            "As partes firmam o presente contrato de prestação de serviços, regido "
+            "pelas cláusulas e condições seguintes.",
+        )
+    )
+
+    blocks.append(("heading", "1. OBJETO DO CONTRATO"))
+    blocks.append(
+        (
+            "para",
+            "Prestação de serviços e fornecimento dos itens abaixo para o evento "
+            "do(a) CONTRATANTE:",
+        )
+    )
+    if contrato.orcamento:
+        for item in contrato.orcamento.itens_produto.select_related("produto"):
+            blocks.append(
+                ("bullet", f"{_contract_quantity(item.quantidade)} × {item.produto.nome}")
+            )
+        for item in contrato.orcamento.itens_servico.select_related("servico"):
+            blocks.append(
+                ("bullet", f"{_contract_quantity(item.quantidade)} × {item.servico.nome}")
+            )
+    else:
+        blocks.append(
+            ("bullet", "Itens conforme proposta comercial aceita pelas partes.")
+        )
+
+    local = contrato.endereco_evento or "não informado"
+    data = contrato.data_evento.strftime("%d/%m/%Y") if contrato.data_evento else "não informada"
+    inicio = contrato.horario_inicio.strftime("%H:%M") if contrato.horario_inicio else "não informado"
+    fim = contrato.horario_fim.strftime("%H:%M") if contrato.horario_fim else "não informado"
+    blocks.append(("para", f"Local do evento: {local}"))
+    blocks.append(("para", f"Data do evento: {data}"))
+    blocks.append(("para", f"Horário: {inicio} às {fim}"))
+    blocks.append(
+        (
+            "para",
+            "Os equipamentos deverão permanecer no endereço indicado, sendo vedado "
+            "seu deslocamento sem autorização prévia da CONTRATADA.",
+        )
+    )
+
+    blocks.append(("heading", "2. RESPONSABILIDADE PELOS EQUIPAMENTOS"))
+    blocks.append(
+        (
+            "para",
+            "O(A) CONTRATANTE compromete-se a utilizar e conservar adequadamente os "
+            "equipamentos, respondendo por danos, perdas ou extravios durante o período "
+            "em que estiverem sob sua responsabilidade.",
+        )
+    )
+    if not contrato.com_profissional:
+        blocks.append(
+            (
+                "para",
+                "Como o serviço foi contratado sem profissional da CONTRATADA, a "
+                "operação segura e a guarda dos equipamentos serão de responsabilidade "
+                "integral do(a) CONTRATANTE.",
+            )
+        )
+
+    blocks.append(("heading", "3. PROFISSIONAIS E HORAS EXTRAS"))
+    if contrato.com_profissional:
+        blocks.append(
+            (
+                "para",
+                f"O serviço inclui {contrato.quantidade_profissionais} profissional(is) "
+                f"no horário contratado. Cada hora adicional iniciada terá o valor de "
+                f"{_contract_money(contrato.valor_hora_extra)}, pago diretamente no "
+                "momento da solicitação.",
+            )
+        )
+    else:
+        blocks.append(("para", "Este contrato não inclui profissional da CONTRATADA."))
+
+    blocks.append(("heading", "4. SOBRA DO CHOPP E PERMANÊNCIA DOS EQUIPAMENTOS"))
+    blocks.append(
+        (
+            "para",
+            f"Havendo sobra de chopp, a chopeira poderá permanecer no mesmo endereço "
+            f"por até {contrato.prazo_chopeira_horas} horas, mediante autorização da "
+            "CONTRATADA. O conteúdo também poderá ser acondicionado em recipientes "
+            "fornecidos pelo(a) CONTRATANTE.",
+        )
+    )
+    blocks.append(
+        (
+            "para",
+            f"O transporte ou a reinstalação em outro endereço, quando autorizados, "
+            f"terão taxa de {_contract_money(contrato.taxa_nova_instalacao)}.",
+        )
+    )
+
+    blocks.append(("heading", "5. VALOR E FORMA DE PAGAMENTO"))
+    blocks.append(("para", f"Valor total: {_contract_money(contrato.valor_total)}."))
+    blocks.append(
+        (
+            "para",
+            f"Valor pago: {_contract_money(contrato.valor_pago)}"
+            + (
+                f", em {contrato.data_pagamento:%d/%m/%Y}."
+                if contrato.data_pagamento else "."
+            ),
+        )
+    )
+    blocks.append(
+        (
+            "para",
+            f"Saldo pendente: {_contract_money(contrato.saldo_pendente)}"
+            + (
+                f", com vencimento em {contrato.data_vencimento_saldo:%d/%m/%Y}."
+                if contrato.data_vencimento_saldo else "."
+            ),
+        )
+    )
+    if contrato.orcamento:
+        blocks.append(
+            (
+                "para",
+                f"Forma de pagamento: {contrato.orcamento.get_forma_pagamento_display()}.",
+            )
+        )
+
+    blocks.append(("heading", "6. CANCELAMENTO"))
+    blocks.append(
+        ("para", "a) Em até 7 (sete) dias após a assinatura, será devolvido 100% do valor pago.")
+    )
+    blocks.append(
+        (
+            "para",
+            "b) Após esse prazo, será devolvido 50% do valor pago, considerando a reserva "
+            "da data e os custos operacionais já assumidos.",
+        )
+    )
+    blocks.append(
+        (
+            "para",
+            "c) Se a CONTRATADA cancelar, devolverá 100% do valor recebido, ressalvados "
+            "casos fortuitos ou de força maior.",
+        )
+    )
+
+    blocks.append(("heading", "7. FORO"))
+    blocks.append(
+        (
+            "para",
+            f"As partes elegem o foro da comarca de {contrato.cidade_assinatura}, com "
+            "renúncia a qualquer outro, para resolver dúvidas decorrentes deste contrato.",
+        )
+    )
+    if contrato.observacoes:
+        blocks.append(("heading", "OBSERVAÇÕES ADICIONAIS"))
+        blocks.append(("para", contrato.observacoes))
+
+    signature_date = contrato.data_assinatura_usuario or timezone.localdate()
+
+    return {
+        "title": title,
+        "blocks": blocks,
+        "nome_empresa": nome_empresa,
+        "cliente_nome": cliente.nome_completo,
+        "cidade": contrato.cidade_assinatura,
+        "signature_date": signature_date,
+    }
+
+
+def render_standard_contract(contrato):
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    content = _standard_contract_content(contrato)
 
     output_dir = Path(settings.MEDIA_ROOT) / "documentos" / "finais"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -192,171 +398,137 @@ def render_standard_contract(contrato):
 
     title = document.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run(
-        "CONTRATO DE PRESTAÇÃO DE SERVIÇOS – CHOPEIRA ELÉTRICA"
-        if contrato.tipo_modelo == "chopeira_eletrica"
-        else "CONTRATO DE PRESTAÇÃO DE SERVIÇOS E COMODATO"
-    )
+    run = title.add_run(content["title"])
     run.bold = True
     run.font.size = Pt(14)
 
-    cliente = contrato.cliente
-    _contract_heading(document, "CONTRATANTE")
-    document.add_paragraph(
-        f"{cliente.nome_completo}, {cliente.get_tipo_documento_display()} nº "
-        f"{cliente.documento_formatado}, telefone: {cliente.celular}, e-mail: "
-        f"{cliente.email}, residente em {cliente.endereco_residencial}, doravante "
-        "denominado(a) CONTRATANTE."
-    )
+    for kind, text in content["blocks"]:
+        if kind == "heading":
+            _contract_heading(document, text)
+        elif kind == "bullet":
+            document.add_paragraph(text, style="List Bullet")
+        else:
+            document.add_paragraph(text)
 
-    _contract_heading(document, "CONTRATADA")
-    company_parts = [nome_empresa]
-    if cnpj_empresa:
-        company_parts.append(f"CNPJ nº {cnpj_empresa}")
-    if endereco_empresa:
-        company_parts.append(f"com sede em {endereco_empresa}")
-    if email_empresa:
-        company_parts.append(f"e-mail: {email_empresa}")
-    if telefone_empresa:
-        company_parts.append(f"telefone: {telefone_empresa}")
-    document.add_paragraph(
-        ", ".join(company_parts) + ", doravante denominada CONTRATADA."
-    )
-    document.add_paragraph(
-        "As partes firmam o presente contrato de prestação de serviços, regido "
-        "pelas cláusulas e condições seguintes."
-    )
-
-    _contract_heading(document, "1. OBJETO DO CONTRATO")
-    document.add_paragraph(
-        "Prestação de serviços e fornecimento dos itens abaixo para o evento "
-        "do(a) CONTRATANTE:"
-    )
-    if contrato.orcamento:
-        for item in contrato.orcamento.itens_produto.select_related("produto"):
-            document.add_paragraph(
-                f"{_contract_quantity(item.quantidade)} × {item.produto.nome}",
-                style="List Bullet",
-            )
-        for item in contrato.orcamento.itens_servico.select_related("servico"):
-            document.add_paragraph(
-                f"{_contract_quantity(item.quantidade)} × {item.servico.nome}",
-                style="List Bullet",
-            )
-    else:
-        document.add_paragraph(
-            "Itens conforme proposta comercial aceita pelas partes.", style="List Bullet"
-        )
-
-    local = contrato.endereco_evento or "não informado"
-    data = contrato.data_evento.strftime("%d/%m/%Y") if contrato.data_evento else "não informada"
-    inicio = contrato.horario_inicio.strftime("%H:%M") if contrato.horario_inicio else "não informado"
-    fim = contrato.horario_fim.strftime("%H:%M") if contrato.horario_fim else "não informado"
-    document.add_paragraph(f"Local do evento: {local}")
-    document.add_paragraph(f"Data do evento: {data}")
-    document.add_paragraph(f"Horário: {inicio} às {fim}")
-    document.add_paragraph(
-        "Os equipamentos deverão permanecer no endereço indicado, sendo vedado "
-        "seu deslocamento sem autorização prévia da CONTRATADA."
-    )
-
-    _contract_heading(document, "2. RESPONSABILIDADE PELOS EQUIPAMENTOS")
-    document.add_paragraph(
-        "O(A) CONTRATANTE compromete-se a utilizar e conservar adequadamente os "
-        "equipamentos, respondendo por danos, perdas ou extravios durante o período "
-        "em que estiverem sob sua responsabilidade."
-    )
-    if not contrato.com_profissional:
-        document.add_paragraph(
-            "Como o serviço foi contratado sem profissional da CONTRATADA, a "
-            "operação segura e a guarda dos equipamentos serão de responsabilidade "
-            "integral do(a) CONTRATANTE."
-        )
-
-    _contract_heading(document, "3. PROFISSIONAIS E HORAS EXTRAS")
-    if contrato.com_profissional:
-        document.add_paragraph(
-            f"O serviço inclui {contrato.quantidade_profissionais} profissional(is) "
-            f"no horário contratado. Cada hora adicional iniciada terá o valor de "
-            f"{_contract_money(contrato.valor_hora_extra)}, pago diretamente no "
-            "momento da solicitação."
-        )
-    else:
-        document.add_paragraph("Este contrato não inclui profissional da CONTRATADA.")
-
-    _contract_heading(document, "4. SOBRA DO CHOPP E PERMANÊNCIA DOS EQUIPAMENTOS")
-    document.add_paragraph(
-        f"Havendo sobra de chopp, a chopeira poderá permanecer no mesmo endereço "
-        f"por até {contrato.prazo_chopeira_horas} horas, mediante autorização da "
-        "CONTRATADA. O conteúdo também poderá ser acondicionado em recipientes "
-        "fornecidos pelo(a) CONTRATANTE."
-    )
-    document.add_paragraph(
-        f"O transporte ou a reinstalação em outro endereço, quando autorizados, "
-        f"terão taxa de {_contract_money(contrato.taxa_nova_instalacao)}."
-    )
-
-    _contract_heading(document, "5. VALOR E FORMA DE PAGAMENTO")
-    total = contrato.valor_total
-    document.add_paragraph(f"Valor total: {_contract_money(total)}.")
-    document.add_paragraph(
-        f"Valor pago: {_contract_money(contrato.valor_pago)}"
-        + (
-            f", em {contrato.data_pagamento:%d/%m/%Y}."
-            if contrato.data_pagamento else "."
-        )
-    )
-    document.add_paragraph(
-        f"Saldo pendente: {_contract_money(contrato.saldo_pendente)}"
-        + (
-            f", com vencimento em {contrato.data_vencimento_saldo:%d/%m/%Y}."
-            if contrato.data_vencimento_saldo else "."
-        )
-    )
-    if contrato.orcamento:
-        document.add_paragraph(
-            f"Forma de pagamento: {contrato.orcamento.get_forma_pagamento_display()}."
-        )
-
-    _contract_heading(document, "6. CANCELAMENTO")
-    document.add_paragraph(
-        "a) Em até 7 (sete) dias após a assinatura, será devolvido 100% do valor pago."
-    )
-    document.add_paragraph(
-        "b) Após esse prazo, será devolvido 50% do valor pago, considerando a reserva "
-        "da data e os custos operacionais já assumidos."
-    )
-    document.add_paragraph(
-        "c) Se a CONTRATADA cancelar, devolverá 100% do valor recebido, ressalvados "
-        "casos fortuitos ou de força maior."
-    )
-
-    _contract_heading(document, "7. FORO")
-    document.add_paragraph(
-        f"As partes elegem o foro da comarca de {contrato.cidade_assinatura}, com "
-        "renúncia a qualquer outro, para resolver dúvidas decorrentes deste contrato."
-    )
-    if contrato.observacoes:
-        _contract_heading(document, "OBSERVAÇÕES ADICIONAIS")
-        document.add_paragraph(contrato.observacoes)
-
-    signature_date = contrato.data_assinatura_usuario or timezone.localdate()
     document.add_paragraph()
     document.add_paragraph(
-        f"{contrato.cidade_assinatura}, {signature_date:%d/%m/%Y}."
+        f"{content['cidade']}, {content['signature_date']:%d/%m/%Y}."
     )
     document.add_paragraph()
     signature = document.add_table(rows=2, cols=2)
     signature.cell(0, 0).text = "________________________________"
     signature.cell(0, 1).text = "________________________________"
-    signature.cell(1, 0).text = f"CONTRATANTE\n{cliente.nome_completo}"
-    signature.cell(1, 1).text = f"CONTRATADA\n{nome_empresa}"
+    signature.cell(1, 0).text = f"CONTRATANTE\n{content['cliente_nome']}"
+    signature.cell(1, 1).text = f"CONTRATADA\n{content['nome_empresa']}"
     for row in signature.rows:
         for cell in row.cells:
             for paragraph in cell.paragraphs:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     document.save(str(output_path))
+    with output_path.open("rb") as final_file:
+        contrato.documento_final.save(output_name, File(final_file), save=True)
+    return contrato.documento_final
+
+
+def render_standard_contract_pdf(contrato):
+    from xml.sax.saxutils import escape
+
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    content = _standard_contract_content(contrato)
+
+    output_dir = Path(settings.MEDIA_ROOT) / "documentos" / "finais"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_name = f"contrato_{contrato.pk}_{timezone.now():%Y%m%d%H%M%S}.pdf"
+    output_path = output_dir / output_name
+
+    doc = SimpleDocTemplate(
+        str(output_path),
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
+    base_styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "ContractTitle",
+        parent=base_styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        alignment=TA_CENTER,
+        spaceAfter=14,
+    )
+    heading_style = ParagraphStyle(
+        "ContractHeading",
+        parent=base_styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        spaceBefore=10,
+        spaceAfter=4,
+    )
+    body_style = ParagraphStyle(
+        "ContractBody",
+        parent=base_styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10.5,
+        leading=15,
+        alignment=TA_JUSTIFY,
+    )
+    bullet_style = ParagraphStyle(
+        "ContractBullet",
+        parent=body_style,
+        leftIndent=16,
+        bulletIndent=4,
+    )
+
+    story = [Paragraph(escape(content["title"]), title_style)]
+    for kind, text in content["blocks"]:
+        safe = escape(text)
+        if kind == "heading":
+            story.append(Paragraph(safe, heading_style))
+        elif kind == "bullet":
+            story.append(Paragraph(safe, bullet_style, bulletText="•"))
+        else:
+            story.append(Paragraph(safe, body_style))
+
+    story.append(Spacer(1, 24))
+    story.append(
+        Paragraph(
+            escape(f"{content['cidade']}, {content['signature_date']:%d/%m/%Y}."),
+            body_style,
+        )
+    )
+    story.append(Spacer(1, 30))
+    signature_table = Table(
+        [
+            ["________________________________", "________________________________"],
+            [
+                f"CONTRATANTE\n{content['cliente_nome']}",
+                f"CONTRATADA\n{content['nome_empresa']}",
+            ],
+        ],
+        colWidths=[doc.width / 2.0] * 2,
+    )
+    signature_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+                ("TOPPADDING", (0, 1), (-1, 1), 6),
+            ]
+        )
+    )
+    story.append(signature_table)
+
+    doc.build(story)
     with output_path.open("rb") as final_file:
         contrato.documento_final.save(output_name, File(final_file), save=True)
     return contrato.documento_final
@@ -414,23 +586,24 @@ def gerar_pdf_orcamento(orcamento):
             logo = ImageReader(str(fallback_logo))
 
     header_top = height - 1.5 * cm
+    logo_size = 1.7 * cm
     if logo:
         c.drawImage(
             logo,
             1.5 * cm,
-            height - 4.1 * cm,
-            width=2.6 * cm,
-            height=2.6 * cm,
+            header_top - logo_size,
+            width=logo_size,
+            height=logo_size,
             preserveAspectRatio=True,
-            anchor="c",
+            anchor="nw",
             mask="auto",
         )
 
-    company_x = 4.4 * cm
+    company_x = 3.5 * cm
     company_name = configuracao.nome_empresa if configuracao else "Dona do Chopp"
     c.setFillColor(preto)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(company_x, header_top - 0.25 * cm, company_name)
+    c.setFont("Helvetica-Bold", 15)
+    c.drawString(company_x, header_top - 0.2 * cm, company_name)
     c.setFont("Helvetica", 9.5)
     company_y = header_top - 0.75 * cm
     if configuracao and configuracao.cnpj:
@@ -465,11 +638,10 @@ def gerar_pdf_orcamento(orcamento):
         f"{cliente.get_tipo_documento_display()}: {cliente.documento_formatado}",
     )
     c.drawString(1.5 * cm, client_y - 0.9 * cm, cliente.endereco_residencial[:86])
-    c.drawString(
-        1.5 * cm,
-        client_y - 1.35 * cm,
-        f"Contato: {cliente.celular} | E-mail: {cliente.email}",
-    )
+    contato_cliente = f"Contato: {cliente.celular}"
+    if cliente.email:
+        contato_cliente += f" | E-mail: {cliente.email}"
+    c.drawString(1.5 * cm, client_y - 1.35 * cm, contato_cliente)
 
     data_orcamento = timezone.localtime(orcamento.criado_em).strftime("%d/%m/%Y")
     validade = orcamento.validade.strftime("%d/%m/%Y") if orcamento.validade else "Não informada"

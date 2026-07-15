@@ -12,7 +12,7 @@
             <tr>
                 <td>
                     {% if produto.imagem %}
-                        <img class="item-thumb item-thumb--compact" src="{{ produto.imagem.url }}" alt="{{ produto.nome }}">
+                        <img class="item-thumb item-thumb--compact" src="{{ produto.imagem.url }}" alt="{{ produto.nome }}" loading="lazy" decoding="async" width="44" height="44">
                     {% else %}
                         <span class="item-thumb item-thumb--compact item-thumb--empty"><i class="bi bi-image"></i></span>
                     {% endif %}

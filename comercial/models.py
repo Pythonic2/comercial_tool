@@ -27,7 +27,7 @@ class Cliente(TimeStampedModel):
         verbose_name="Tipo de pessoa",
     )
     documento = models.CharField(max_length=18, unique=True, verbose_name="CPF ou CNPJ")
-    email = models.EmailField(max_length=120)
+    email = models.EmailField(max_length=120, blank=True)
     endereco_residencial = models.CharField(max_length=255)
     celular = models.CharField(max_length=20)
 
