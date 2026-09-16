@@ -2,18 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Scrapy: Runspider Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scrapy",
-            "args": [
-                "runspider",
-                "${file}"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": false
-        },
-        {
             "name": "Streamlit: Dashboard",
             "type": "debugpy",
             "request": "launch",
