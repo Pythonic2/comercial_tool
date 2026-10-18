@@ -18,7 +18,7 @@ services:
       DB_NAME: "banco2_db"
       DB_USER: "banco2_user"
       DB_PASSWORD: "${DB_PASSWORD}"
-      DB_HOST: "postgres_banco2"
+      DB_HOST: "ep-delicate-dew-ac26xzvm.sa-east-1.aws.neon.tech"
       DB_PORT: "5432"
       DB_SCHEMA: "ladingpageddc"
       DB_SSLMODE: "prefer"

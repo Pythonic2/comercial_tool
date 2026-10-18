@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -186,7 +187,11 @@ def servico_update(request, pk):
 
 @login_required
 def orcamento_list(request):
-    orcamentos = Orcamento.objects.select_related("cliente", "usuario")
+    queryset = (
+        Orcamento.objects.select_related("cliente", "usuario")
+        .prefetch_related("itens_produto", "itens_servico")
+    )
+    orcamentos = Paginator(queryset, 25).get_page(request.GET.get("page"))
     return render(request, "comercial/orcamentos/list.html", {"orcamentos": orcamentos})
 
 
@@ -242,7 +247,14 @@ def orcamento_pdf(request, pk):
 
 @login_required
 def contrato_list(request):
-    contratos = Contrato.objects.select_related("cliente", "usuario", "orcamento")
+    queryset = (
+        Contrato.objects.select_related("cliente", "usuario", "orcamento")
+        .prefetch_related(
+            "orcamento__itens_produto",
+            "orcamento__itens_servico",
+        )
+    )
+    contratos = Paginator(queryset, 25).get_page(request.GET.get("page"))
     return render(request, "comercial/contratos/list.html", {"contratos": contratos})
 
 
@@ -311,6 +323,12 @@ def contrato_detail(request, pk):
 
 def _regenerate_contract_if_needed(contrato, formato="docx"):
     if contrato.tipo_modelo != "personalizado":
+        if (
+            contrato.documento_final
+            and contrato.documento_final.name.lower().endswith(f".{formato}")
+            and contrato.documento_final.storage.exists(contrato.documento_final.name)
+        ):
+            return contrato.documento_final
         if formato == "pdf":
             return render_standard_contract_pdf(contrato)
         return render_standard_contract(contrato)

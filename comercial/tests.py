@@ -1,15 +1,18 @@
 from datetime import date, time, timedelta
 from decimal import Decimal
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .forms import ClienteForm, ProdutoForm
 from .models import Cliente, Contrato, Orcamento, OrcamentoProduto, Produto
-from .services import render_standard_contract
+from .services import gerar_pdf_orcamento, render_standard_contract
 
 
 class CommercialFlowTests(TestCase):
@@ -150,6 +153,62 @@ class CommercialFlowTests(TestCase):
             self.assertIn("Rua do Evento, 100", text)
             self.assertIn("R$ 200,00", text)
             self.assertIn("R$ 150,00", text)
+
+    def test_generated_files_do_not_leave_duplicate_copies(self):
+        contrato = Contrato.objects.create(
+            cliente=self.cliente,
+            usuario=self.user,
+            orcamento=self.orcamento,
+            titulo="Contrato sem duplicacao",
+            tipo_modelo="chopeira_eletrica",
+        )
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            render_standard_contract(contrato)
+            render_standard_contract(contrato)
+            gerar_pdf_orcamento(self.orcamento)
+            gerar_pdf_orcamento(self.orcamento)
+
+            contract_files = list((Path(media_root) / "documentos" / "finais").iterdir())
+            budget_files = list((Path(media_root) / "orcamentos").iterdir())
+            self.assertEqual(len(contract_files), 1)
+            self.assertEqual(len(budget_files), 1)
+
+    def test_contract_download_reuses_existing_document(self):
+        contrato = Contrato.objects.create(
+            cliente=self.cliente,
+            usuario=self.user,
+            orcamento=self.orcamento,
+            titulo="Contrato reutilizado",
+            tipo_modelo="chopeira_eletrica",
+        )
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            original_name = render_standard_contract(contrato).name
+            response = self.client.get(reverse("contrato_documento_final", args=[contrato.pk]))
+            self.assertEqual(response.status_code, 200)
+            response.close()
+            contrato.refresh_from_db()
+            self.assertEqual(contrato.documento_final.name, original_name)
+
+    def test_budget_list_is_paginated(self):
+        Orcamento.objects.bulk_create(
+            [
+                Orcamento(cliente=self.cliente, usuario=self.user, forma_pagamento="pix")
+                for _ in range(25)
+            ]
+        )
+        response = self.client.get(reverse("orcamento_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["orcamentos"]), 25)
+        self.assertTrue(response.context["orcamentos"].has_next())
+
+    def test_prefetched_budget_totals_do_not_issue_queries_per_row(self):
+        queryset = Orcamento.objects.select_related("cliente", "usuario").prefetch_related(
+            "itens_produto", "itens_servico"
+        )
+        with CaptureQueriesContext(connection) as queries:
+            totals = [orcamento.valor_total for orcamento in queryset]
+        self.assertEqual(totals, [Decimal("200.00")])
+        self.assertEqual(len(queries), 3)
 
     def test_standard_contract_form_skips_placeholder_screen_and_uses_budget_data(self):
         with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):

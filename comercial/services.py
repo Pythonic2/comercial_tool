@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 from django.conf import settings
-from django.core.files import File
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
 
@@ -22,6 +22,16 @@ FIXED_CONTRACT_TEMPLATES = {
         "download_name": "Contrato Modelo.docx",
     },
 }
+
+
+def _store_generated_file(file_field, output_path, output_name):
+    """Move a generated local file into Django storage without keeping a duplicate."""
+    content = ContentFile(output_path.read_bytes())
+    if file_field:
+        file_field.delete(save=False)
+    output_path.unlink(missing_ok=True)
+    file_field.save(output_name, content, save=True)
+    return file_field
 
 
 def fixed_contract_template_path(tipo_modelo):
@@ -87,10 +97,7 @@ def render_document_with_values(contrato):
         text = original.read_text(encoding="utf-8", errors="ignore")
         output_path.write_text(_replace_text(text, values), encoding="utf-8")
 
-    with output_path.open("rb") as final_file:
-        contrato.documento_final.save(output_name, File(final_file), save=True)
-
-    return contrato.documento_final
+    return _store_generated_file(contrato.documento_final, output_path, output_name)
 
 
 def render_fixed_contract_template(contrato):
@@ -113,10 +120,7 @@ def render_fixed_contract_template(contrato):
         text = original.read_text(encoding="utf-8", errors="ignore")
         output_path.write_text(_replace_text(text, values), encoding="utf-8")
 
-    with output_path.open("rb") as final_file:
-        contrato.documento_final.save(output_name, File(final_file), save=True)
-
-    return contrato.documento_final
+    return _store_generated_file(contrato.documento_final, output_path, output_name)
 
 def _replace_text(text, values):
     for key, value in values.items():
@@ -426,9 +430,7 @@ def render_standard_contract(contrato):
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     document.save(str(output_path))
-    with output_path.open("rb") as final_file:
-        contrato.documento_final.save(output_name, File(final_file), save=True)
-    return contrato.documento_final
+    return _store_generated_file(contrato.documento_final, output_path, output_name)
 
 
 def render_standard_contract_pdf(contrato):
@@ -529,9 +531,7 @@ def render_standard_contract_pdf(contrato):
     story.append(signature_table)
 
     doc.build(story)
-    with output_path.open("rb") as final_file:
-        contrato.documento_final.save(output_name, File(final_file), save=True)
-    return contrato.documento_final
+    return _store_generated_file(contrato.documento_final, output_path, output_name)
 
 
 def _contract_heading(document, text):
@@ -703,10 +703,7 @@ def gerar_pdf_orcamento(orcamento):
     c.drawString(2 * cm, 1.3 * cm, f"Assinatura do funcionário: {orcamento.responsavel}")
 
     c.save()
-    with output_path.open("rb") as pdf_file:
-        orcamento.arquivo_pdf.save(output_path.name, File(pdf_file), save=True)
-
-    return orcamento.arquivo_pdf
+    return _store_generated_file(orcamento.arquivo_pdf, output_path, output_path.name)
 
 def _image_reader(image_field):
     if not image_field:
