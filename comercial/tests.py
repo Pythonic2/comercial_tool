@@ -198,7 +198,7 @@ class CommercialFlowTests(TestCase):
         )
         response = self.client.get(reverse("orcamento_list"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context["orcamentos"]), 25)
+        self.assertEqual(len(response.context["orcamentos"]), 10)
         self.assertTrue(response.context["orcamentos"].has_next())
 
     def test_prefetched_budget_totals_do_not_issue_queries_per_row(self):

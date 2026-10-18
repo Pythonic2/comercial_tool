@@ -191,7 +191,7 @@ def orcamento_list(request):
         Orcamento.objects.select_related("cliente", "usuario")
         .prefetch_related("itens_produto", "itens_servico")
     )
-    orcamentos = Paginator(queryset, 25).get_page(request.GET.get("page"))
+    orcamentos = Paginator(queryset, 10).get_page(request.GET.get("page"))
     return render(request, "comercial/orcamentos/list.html", {"orcamentos": orcamentos})
 
 
@@ -254,7 +254,7 @@ def contrato_list(request):
             "orcamento__itens_servico",
         )
     )
-    contratos = Paginator(queryset, 25).get_page(request.GET.get("page"))
+    contratos = Paginator(queryset, 10).get_page(request.GET.get("page"))
     return render(request, "comercial/contratos/list.html", {"contratos": contratos})
 
 
