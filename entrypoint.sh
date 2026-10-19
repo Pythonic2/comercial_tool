@@ -13,4 +13,4 @@ case "${RUN_MIGRATIONS:-false}" in
         ;;
 esac
 
-exec gunicorn core.wsgi:application --bind "0.0.0.0:${PORT:-8080}" --workers "${GUNICORN_WORKERS:-1}" --threads "${GUNICORN_THREADS:-4}" --timeout "${GUNICORN_TIMEOUT:-120}" --access-logfile - --error-logfile -
+exec gunicorn core.wsgi:application --bind "0.0.0.0:${PORT:-8081}" --workers "${GUNICORN_WORKERS:-1}" --threads "${GUNICORN_THREADS:-4}" --timeout "${GUNICORN_TIMEOUT:-120}" --access-logfile - --error-logfile -
