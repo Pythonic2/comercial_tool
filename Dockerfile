@@ -13,6 +13,6 @@ COPY . .
 RUN chmod +x /app/entrypoint.sh
 RUN DJANGO_ENV=development python manage.py collectstatic --noinput
 
-EXPOSE 8081
+EXPOSE 8080
 
 CMD ["/app/entrypoint.sh"]

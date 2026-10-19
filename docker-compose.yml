@@ -9,7 +9,7 @@ services:
       - .env
     environment:
       DJANGO_ENV: production
-      PORT: "8081"
+      PORT: "8080"
       DEBUG: "False"
       DJANGO_SECURE_SSL_REDIRECT: "False"
       SECRET_KEY: "${SECRET_KEY:-local-only-change-me}"
@@ -28,7 +28,7 @@ services:
       SERVE_MEDIA: "true"
       RUN_MIGRATIONS: "true"
     ports:
-      - "8011:8081"
+      - "8011:8080"
     networks:
       - pi_default
     volumes:
